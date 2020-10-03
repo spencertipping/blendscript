@@ -46,10 +46,29 @@ def seq(*ps):
 def alt(*ps):
   def f(s, i):
     for p in ps:
-      (s2, i2) = p(s, i)
+      (v, i2) = p(s, i)
       if i2 is not None:
-        return (s2, i2)
+        return (v, i2)
     return fail(None)
+
+def rep(p, min=0, max=None):
+  def f(s, i):
+    vs = []
+    while max is None or len(vs) < max:
+      (v, i2) = p(s, i)
+      if i2 is None:
+        return ok(vs, i) if min <= len(vs) and len(vs) <= max else fail(None)
+      else:
+        vs.append(v)
+        i = i2
+    return (vs, i)
+  return f
+
+def maybe(p):
+  def f(s, i):
+    (v, i2) = p(s, i)
+    return ok(v, i2) if i2 is not None else ok(None, i)
+  return f
 
 def pmap(f, p):
   def g(s, i):
