@@ -39,7 +39,7 @@ def const(k, p):
   parser(p)
   def f(s, i):
     (_, i2) = p(s, i)
-    return (k, i2)
+    return (k if i2 is not None else None, i2)
   return parserify(f)
 
 def seq(*ps):
@@ -58,7 +58,7 @@ class alt:
   def __init__(self, *ps):
     self.ps = []
     parserify(self)
-    for p in ps: self.append(p)
+    self.append(*ps)
 
   def __call__(self, s, i):
     for p in self.ps:
