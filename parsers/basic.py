@@ -15,6 +15,8 @@ p_comment    = re(br'#.*\n?')
 p_whitespace = re(br'\s+')
 p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
 
+
+# Blender object references (by name)
 def p_member_of(h, p):
   return pif(lambda x: x is not None,
              pmap(lambda s: h.get(s.decode(), None), p))

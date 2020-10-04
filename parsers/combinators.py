@@ -53,15 +53,23 @@ def seq(*ps):
     return (vs, i)
   return parserify(f)
 
-def alt(*ps):
-  for p in ps: parser(p)
-  def f(s, i):
-    for p in ps:
+# alt is a class so we can dynamically add new alternatives
+class alt:
+  def __init__(self, *ps):
+    self.ps = []
+    parserify(self)
+    for p in ps: self.append(p)
+
+  def __call__(self, s, i):
+    for p in self.ps:
       (v, i2) = p(s, i)
       if i2 is not None:
         return (v, i2)
     return fail(None)
-  return parserify(f)
+
+  def append(self, *ps):
+    for p in ps: self.ps.append(parser(p))
+    return self
 
 def rep(p, min=0, max=None):
   parser(p)
@@ -91,7 +99,7 @@ def pmap(f, p):
   parser(p)
   def g(s, i):
     (v, i2) = p(s, i)
-    return (v, i2) if i2 is None else (f(v), i2)
+    return (v if i2 is None else f(v), i2)
   return parserify(g)
 
 def pif(f, p):
