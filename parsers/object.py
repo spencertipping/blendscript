@@ -49,3 +49,16 @@ in the right way. For example, "extrude along X; extrude along Y" for a cube
 face would produce parallel edges in each direction; there's a diamond but no
 loop if you assume a DAG.
 """
+
+from mathutils import Vector
+
+class Frontier:
+  def __init__(self, init=Vector((0, 0, 0))):
+    # TODO: figure out what type of data structure to use for this; what is a
+    # frontier surface?
+    self.ring     = [0]
+    self.links    = {}
+
+    self.vertices = [init]
+    self.edges    = []
+    self.faces    = []
