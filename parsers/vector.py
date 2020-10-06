@@ -1,5 +1,5 @@
 """
-Vector specification.
+Vectors.
 
 
 """
