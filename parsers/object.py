@@ -60,30 +60,28 @@ class frontier:
 
     For now, queries are just tag names or `None` to select everything.
     """
-    if query is None:
-      return range(len(self.front))
-    else:
-      return self.tags[query]
+    if query is None: return range(len(self.front))
+    else:             return self.tags[query]
 
-  def mesh(self, name):
+  def mesh(self, name, debug=False):
     """
     Create and return a new Blender mesh from the current geometry state.
 
     All vertex normals are set to +Z to meet Blender's mesh validation
     requirements. This should probably be improved at some point in the future.
     """
-    print(f"creating mesh {name}")
-    for i in range(len(self.vertices)): print(f"v[{i}] = {self.vertices[i]}")
-    for (v1, v2) in self.edges: print(f"edge: {v1} <-> {v2}")
-    for f in self.faces: print(f"face: {f}")
+    if debug:
+      print(f"frontier.mesh({name})")
+      for i in range(len(self.vertices)): print(f"  v[{i}] = {self.vertices[i]}")
+      for (v1, v2) in self.edges: print(f"  edge: {v1} <-> {v2}")
+      for f in self.faces: print(f"  face: {f}")
 
     m = bpy.data.meshes.new(name)
     m.from_pydata(self.vertices, self.edges, self.faces)
     for v in m.vertices: v.normal = Vector((0, 0, 1))
 
-    if m.validate(verbose=True):
-      raise Exception(
-        f'frontier.mesh(): {name} failed to validate (see console trace)')
+    if m.validate(verbose=True): raise Exception(
+      f'frontier.mesh({name}): failed to validate (see console trace)')
 
     m.update()
     return m
@@ -92,9 +90,8 @@ class frontier:
               expand=False, edges=True, faces=False):
     """
     Extrudes the wavefront (or a subset) along a vector, connecting the new
-    frontier points either with edges or with faces. New points will inherit
-    tags from the original points as well as being assigned any new tag you
-    specify.
+    frontier points either with edges or with faces. New points be assigned any
+    new tag you specify.
 
     If you expand the frontier, new vertices will be linked to the vertices
     they came from.
@@ -139,7 +136,8 @@ class frontier:
     if faces: self.create_faces(front_edits)
     return self
 
-  def collapse(self, query=None, target=None, edges=True, faces=False):
+  def collapse(self, dv=None, query=None, target=None,
+               edges=True, faces=False):
     """
     Collapses multiple points down to a single point within the wavefront,
     optionally emitting one or more faces in the process. You can specify a
@@ -158,10 +156,15 @@ class frontier:
         tfi = t
         break
 
-    if tfi is None:
-      raise Exception(
-        "frontier.collapse(): target query must specify a point within "
-        "the wavefront being collapsed")
+    if tfi is None: raise Exception(
+      "frontier.collapse(): target query must specify a point within "
+      "the wavefront being collapsed")
+
+    # Displace the target if any displacement was requested. Otherwise we're
+    # just collapsing the selected points to wherever the target is now.
+    if dv is not None:
+      front_edits[tfi] = self.front[tfi]
+      self.front[tfi] = self.vertex(self.vertices[self.front[tfi]] + dv)
 
     # Create edit records for all points that aren't the target. Since we're
     # collapsing down to a smaller set, we hang onto the originals for
@@ -171,6 +174,7 @@ class frontier:
         front_edits[fi] = self.front[fi]
         self.front[fi] = self.front[tfi]
 
+    if edges: self.create_edges(front_edits)
     if faces: self.create_faces(front_edits)
 
     # Now for the hard part: we need to remove newly-duplicated points from
@@ -179,9 +183,11 @@ class frontier:
     new_front = []
     front_map = {}
     for fi in range(len(self.front)):
-      # "edit" == "remove" in this context, so exclude from the new front.
-      if fi not in front_edits:
-        new_front.append(fi)
+      # "edit" == "remove" in this context, so exclude from the new front. The
+      # only exception is the target point, which may have been displaced but
+      # will always be included.
+      if fi == tfi or fi not in front_edits:
+        new_front.append(self.front[fi])
         front_map[fi] = len(new_front) - 1
 
     self.front = new_front
@@ -201,8 +207,7 @@ class frontier:
     exists, you'll get the existing vi for it.
     """
     for i in range(len(self.vertices)):
-      if self.vertices[i] == v:
-        return i
+      if self.vertices[i] == v: return i
     self.vertices.append(v.freeze())
     return len(self.vertices) - 1
 
