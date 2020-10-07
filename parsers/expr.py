@@ -30,12 +30,16 @@ exprs.append(
   pmap(lambda ps: f'({ps[2]} and {ps[1]})', seq(re(br'&'),  expr, expr)),
   pmap(lambda ps: f'({ps[2]} or {ps[1]})',  seq(re(br'\|'),  expr, expr)),
 
-  pmap(lambda ps: f'({ps[2] if {ps[1]} else {ps[3]})',
+  pmap(lambda ps: f'({ps[2]} if {ps[1]} else {ps[3]})',
        seq(re(br'\?'), expr, expr, expr)),
 
   pmap(lambda ps: f'(lambda state: {ps[1]})', seq(re(br'\\'), expr)),
   pmap(lambda ps: f'(state.invoke({ps[1]}, {ps[2]}))',
-       seq(re(br'\.'), expr, expr)),
+       seq(re(br'@'), expr, expr)),
+
+  pmap(lambda ps: f'{ps[3]}.{ps[1].decode()}(*{ps[2]})',
+       seq(re(br'\.@'), p_word, expr, expr)),
+  pmap(lambda ps: f'{ps[2]}.{ps[1].decode()}', seq(re(br'\.'), p_word, expr)),
 
   pmap(lambda ps: f'[{",".join(ps[1])}]',
        seq(re(br'\['), rep(expr), re(br'\]'))),
