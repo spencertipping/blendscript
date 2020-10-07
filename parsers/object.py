@@ -218,7 +218,7 @@ class frontier:
     constraints.
     """
     for i in range(len(vs)):
-      if vs[i] in vs[i:]:
+      if vs[i] in vs[i+1:]:
         return self
 
     self.faces.append(tuple(vs))
