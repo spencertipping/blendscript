@@ -50,6 +50,8 @@ face would produce parallel edges in each direction; there's a diamond but no
 loop if you assume a DAG.
 """
 
+import bpy
+
 from mathutils import Vector
 
 class frontier:
@@ -92,6 +94,16 @@ class frontier:
     else:
       return self.tags[query]
 
+  def mesh(self, name):
+    """
+    Create and return a new Blender mesh from the current geometry state.
+    """
+    m = bpy.data.meshes.new(name)
+    m.from_pydata(self.vertices, self.edges, self.faces)
+    m.update()
+    if not m.validate(verbose=True): raise f'mesh {m} failed to validate'
+    return m
+
   def extrude(self, dv, query=None, tag_as=None,
               expand=False, edges=True, faces=False):
     """
@@ -108,7 +120,6 @@ class frontier:
     # for the front point now at fi. We use this for fast "did-it-change"
     # queries.
     front_edits = {}
-    fis         = self.select(query)
 
     if tag_as is not None and tag_as not in self.tags:
       self.tags[tag_as] = []
@@ -116,7 +127,7 @@ class frontier:
     if expand:
       # Extrude each point by calculating its new location, adding it to the
       # mesh, and logging a new link between the original and the new one.
-      for fi in fis:
+      for fi in self.select(query):
         vi = self.front[fi]
         self.vertices.append(self.vertices[vi] + dv)
         self.front.append(len(self.vertices) - 1)
@@ -133,7 +144,7 @@ class frontier:
     else:
       # Replace self.front[] entries with new extruded vertices. No new links
       # are created.
-      for fi in fis:
+      for fi in self.select(query):
         vi = self.front[fi]
         front_edits[fi] = vi
         self.vertices.append(self.vertices[vi] + dv)
@@ -146,17 +157,51 @@ class frontier:
     # ones.
     if edges:
       for (f1, f2) in self.links:
-        # Skip over any links whose endpoints haven't changed (or aren't new).
-        if f1 not in front_edits and f2 not in front_edits: continue
-
-        # We can refer directly into self.front[] like this because if the edge
-        # is new, it means we produced it by expanding the wavefront -- and
-        # that means we have both the old and new points available. Non-new
-        # edges always correspond to links within the updated wavefront, which
-        # is also covered by what is now self.front[].
-        self.edges.append((self.front[f1], self.front[f2]))
+        if f1 in front_edits or f2 in front_edits:
+          # We can refer directly into self.front[] like this because if the
+          # edge is new, it means we produced it by expanding the wavefront --
+          # and that means we have both the old and new points available.
+          # Non-new edges always correspond to links within the updated
+          # wavefront, which is also covered by what is now self.front[].
+          self.edges.append((self.front[f1], self.front[f2]))
 
     # Faces are a lot like edges, except that we also need to consider the
-    # original point locations.
+    # original point locations. Faces arise from links one or both of whose
+    # endpoints have moved, and there are two possibilities:
+    #
+    # 1. One endpoint moved: create a triangle
+    # 2. Both endpoints moved: create a quad
     if faces:
-      # TODO
+      for (f1, f2) in self.links:
+        v1  = self.front[f1]
+        v2  = self.front[f2]
+        v10 = front_edits.get(f1, v1)
+        v20 = front_edits.get(f2, v2)
+
+        if v10 != v1 and v20 != v2: self.faces.append((v10, v1, v2, v20))
+        elif v10 != v1:             self.faces.append((v10, v1, v2))
+        elif v20 != v2:             self.faces.append(     (v1, v2, v20))
+
+    return self
+
+  def collapse(self, query=None, target=None, face=False):
+    """
+    Collapses multiple points down to a single point within the wavefront,
+    optionally emitting one or more faces in the process. You can specify a
+    target query to select which point will be the result; if specified, the
+    target must identify one of the points being collapsed. If unspecified, one
+    of the points being collapsed is chosen arbitrarily (but
+    deterministically).
+    """
+
+    front_edits = {}
+    fis         = self.query(query)
+    tfi         = None
+    for t in self.query(target): if t in fis: tfi = t; break
+
+    if tfi is None:
+      raise "frontier.collapse(): target query must specify a point within "
+            "the wavefront being collapsed"
+
+    tvi = self.front[tfi]
+    for fi in fis: front_edits[fi] = tvi
