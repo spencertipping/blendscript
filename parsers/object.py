@@ -68,7 +68,15 @@ class frontier:
   def mesh(self, name):
     """
     Create and return a new Blender mesh from the current geometry state.
+
+    All vertex normals are set to +Z to meet Blender's mesh validation
+    requirements. This should probably be improved at some point in the future.
     """
+    print(f"creating mesh {name}")
+    for i in range(len(self.vertices)): print(f"v[{i}] = {self.vertices[i]}")
+    for (v1, v2) in self.edges: print(f"edge: {v1} <-> {v2}")
+    for f in self.faces: print(f"face: {f}")
+
     m = bpy.data.meshes.new(name)
     m.from_pydata(self.vertices, self.edges, self.faces)
     for v in m.vertices: v.normal = Vector((0, 0, 1))
@@ -195,7 +203,7 @@ class frontier:
     for i in range(len(self.vertices)):
       if self.vertices[i] == v:
         return i
-    self.vertices.append(v)
+    self.vertices.append(v.freeze())
     return len(self.vertices) - 1
 
   def edge(self, vi1, vi2):
@@ -215,20 +223,23 @@ class frontier:
   def face(self, *vs):
     """
     Adds a face to the geometry, provided that the face won't violate any
-    constraints.
+    constraints. Duplicate vertices are removed.
     """
-    for i in range(len(vs)):
-      if vs[i] in vs[i+1:]:
-        return self
-
-    self.faces.append(tuple(vs))
+    uniq_vs = []
+    for v in vs:
+      if v not in uniq_vs: uniq_vs.append(v)
+    if len(uniq_vs) > 2: self.faces.append(tuple(uniq_vs))
     return self
 
   def create_edges(self, front_edits):
-    # Edges are created for (1) any new links; and (2) any existing links whose
-    # endpoints have changed. In practice both of these cases are handled by
-    # consulting front_edits: new vertices are represented as edits of existing
-    # ones.
+    """
+    Creates all edges resulting from a series of edits to the wavefront.
+
+    Edges are created for (1) any new links; and (2) any existing links whose
+    endpoints have changed. In practice both of these cases are handled by
+    consulting front_edits: new vertices are represented as edits of existing
+    ones.
+    """
     for (f1, f2) in self.links:
       if f1 in front_edits or f2 in front_edits:
         # We can refer directly into self.front[] like this because if the
@@ -244,12 +255,16 @@ class frontier:
       self.edge(front_edits[fi], self.front[fi])
 
   def create_faces(self, front_edits):
-    # Faces are a lot like edges, except that we also need to consider the
-    # original point locations. Faces arise from links one or both of whose
-    # endpoints have moved, and there are two possibilities:
-    #
-    # 1. One endpoint moved: create a triangle
-    # 2. Both endpoints moved: create a quad
+    """
+    Creates all faces resulting from a series of edits to the wavefront.
+
+    Faces are a lot like edges, except that we also need to incorporate
+    original point locations. Faces arise from links one or both of whose
+    endpoints have moved, and there are two possibilities:
+
+    1. One endpoint moved: create a triangle
+    2. Both endpoints moved: create a quad
+    """
     for (f1, f2) in self.links:
       v1  = self.front[f1]
       v2  = self.front[f2]
