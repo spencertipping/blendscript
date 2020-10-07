@@ -1,7 +1,15 @@
 """
-Vectors.
+Vectors have two main uses in BlendScript: specifying the location of an
+object, and specifying displacements or relative movements, e.g. as part of a
+mesh extrusion frontier. Specifying a location might require arbitrarily much
+computation, including from variables or points within other meshes.
 
-
+Relative movements are more interesting because we might want to use a stack of
+transformation matrices and we might want to modify those matrices while
+specifying movements. Although vectors are parsed individually, that parse
+action also impacts a dynamically-scoped matrix state. The matrix state is
+itself a variable, which means that the parse output from a vector is a
+_function_, not a plain vector value.
 """
 
 from .basic       import *
@@ -9,29 +17,3 @@ from .combinators import *
 
 from mathutils import Vector
 from functools import reduce
-
-vector_op = alt()
-p_vector  = pmap(lambda ops: reduce(lambda v, f: f(v), ops, Vector((0, 0, 0))),
-                 rep(vector_op, min=1))
-
-p_vecatom = alt(pmap(lambda xs: xs[1], seq(re(b'\['), p_vector, re(b'\]'))),
-                pmap(lambda x: Vector((x, x, x)), p_float))
-
-# Numeric broadcasting
-vector_op.append(pmap(lambda x: lambda v: v + x, p_vecatom))
-
-# Single-component selection
-vector_op.append(
-  pmap(lambda v1: lambda v: v + Vector((v1[1][0], 0, 0)), seq(re(b'x'), p_vecatom)),
-  pmap(lambda v1: lambda v: v + Vector((0, v1[1][1], 0)), seq(re(b'y'), p_vecatom)),
-  pmap(lambda v1: lambda v: v + Vector((0, 0, v1[1][2])), seq(re(b'z'), p_vecatom)))
-
-# Inversions
-vector_op.append(
-  pmap(lambda v1: lambda v: v - v1[1], seq(re(b'-'), p_vecatom)),
-  pmap(lambda v1: lambda v: v + Vector((1 / (v1[1][0] or 1),
-                                        1 / (v1[1][1] or 1),
-                                        1 / (v1[1][2] or 1))),
-       seq(re(b'/'), p_vecatom)))
-
-# Mesh references

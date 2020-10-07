@@ -22,6 +22,7 @@ def p_member_of(h, p):
              pmap(lambda s: h.get(s.decode(), None), p))
 
 # From https://docs.blender.org/api/current/bpy.types.BlendData.html
+unsupported_bpy_datas = []
 for t in ('actions armatures brushes cache_files collections curves '
           'filepath fonts grease_pencils hairs images lattices libraries '
           'lightprobes lights linestyles masks materials meshes metaballs '
@@ -32,4 +33,9 @@ for t in ('actions armatures brushes cache_files collections curves '
     exec(f'p_{t} = p_member_of(bpy.data.{t}, p_word)', globals(), None)
   except:
     exec(f'p_{t} = lambda s, i: fail(None)', globals(), None)
-    print(f'BlendScript warning: your version of Blender lacks support for {t}')
+    unsupported_bpy_datas.append(t)
+
+if len(unsupported_bpy_datas):
+  print(f'BlendScript warning: disabling the following unavailable entries '
+        f'in bpy.data: {unsupported_bpy_datas}; their parsers will reject '
+        f'input')

@@ -29,7 +29,7 @@ class frontier:
   """
   A frontier-oriented mesh generator.
   """
-  def __init__(self, init=Vector((0, 0, 0))):
+  def __init__(self, init=Vector((0, 0, 0)), init_tag=None):
     self.vertices = [init]
     self.edges    = []
     self.faces    = []
@@ -47,11 +47,18 @@ class frontier:
     self.front[].
     """
 
-    self.tags = {'e': [0]}
+    self.tags = {}
     """
     The mapping of tags used to select subsets of the wavefront to operate on.
     Values are lists of indexes into self.front[].
     """
+
+    if init_tag is not None: self.tag(init_tag, 0)
+
+  def tag(self, t, fi):
+    if t not in self.tags: self.tags[t] = []
+    if fi not in self.tags[t]: self.tags[t].append(fi)
+    return self
 
   def select(self, query):
     """

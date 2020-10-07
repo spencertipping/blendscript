@@ -1,5 +1,5 @@
 """
-Mesh creation.
+Mesh creation via the frontier generator.
 
 
 """
