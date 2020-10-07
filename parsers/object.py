@@ -115,7 +115,6 @@ class frontier:
     If you expand the frontier, new vertices will be linked to the vertices
     they came from.
     """
-
     # front_edits[fi] = vi0, where self.vertices[vi0] is the original location
     # for the front point now at fi. We use this for fast "did-it-change"
     # queries.
@@ -151,40 +150,11 @@ class frontier:
         self.front[fi] = len(self.vertices) - 1
         if tag_as is not None: self.tags[tag_as].append(fi)
 
-    # Edges are created for (1) any new links; and (2) any existing links whose
-    # endpoints have changed. In practice both of these cases are handled by
-    # consulting front_edits: new vertices are represented as edits of existing
-    # ones.
-    if edges:
-      for (f1, f2) in self.links:
-        if f1 in front_edits or f2 in front_edits:
-          # We can refer directly into self.front[] like this because if the
-          # edge is new, it means we produced it by expanding the wavefront --
-          # and that means we have both the old and new points available.
-          # Non-new edges always correspond to links within the updated
-          # wavefront, which is also covered by what is now self.front[].
-          self.edges.append((self.front[f1], self.front[f2]))
-
-    # Faces are a lot like edges, except that we also need to consider the
-    # original point locations. Faces arise from links one or both of whose
-    # endpoints have moved, and there are two possibilities:
-    #
-    # 1. One endpoint moved: create a triangle
-    # 2. Both endpoints moved: create a quad
-    if faces:
-      for (f1, f2) in self.links:
-        v1  = self.front[f1]
-        v2  = self.front[f2]
-        v10 = front_edits.get(f1, v1)
-        v20 = front_edits.get(f2, v2)
-
-        if v10 != v1 and v20 != v2: self.faces.append((v10, v1, v2, v20))
-        elif v10 != v1:             self.faces.append((v10, v1, v2))
-        elif v20 != v2:             self.faces.append(     (v1, v2, v20))
-
+    if edges: self.create_edges(front_edits)
+    if faces: self.create_faces(front_edits)
     return self
 
-  def collapse(self, query=None, target=None, face=False):
+  def collapse(self, query=None, target=None, edges=True, faces=False):
     """
     Collapses multiple points down to a single point within the wavefront,
     optionally emitting one or more faces in the process. You can specify a
@@ -193,15 +163,76 @@ class frontier:
     of the points being collapsed is chosen arbitrarily (but
     deterministically).
     """
-
     front_edits = {}
     fis         = self.query(query)
     tfi         = None
-    for t in self.query(target): if t in fis: tfi = t; break
 
+    # Any point in the target will do, so long as it's also in the query set.
+    for t in self.query(target): if t in fis: tfi = t; break
     if tfi is None:
       raise "frontier.collapse(): target query must specify a point within "
             "the wavefront being collapsed"
 
-    tvi = self.front[tfi]
-    for fi in fis: front_edits[fi] = tvi
+    # Create edit records for all points that aren't the target. Since we're
+    # collapsing down to a smaller set, we hang onto the originals for
+    # reference and zero out all but one of the ones in the original query.
+    for fi in fis:
+      if fi != tfi:
+        front_edits[fi] = self.front[fi]
+        self.front[fi] = self.front[tfi]
+
+    if faces: self.create_faces(front_edits)
+
+    # Now for the hard part: we need to remove newly-duplicated points from
+    # self.front[]. This will result in the indexes changing, which means we
+    # also need to rewrite self.links[] and self.tags[].
+    new_front = []
+    front_map = {}
+    for fi in xrange(len(self.front)):
+      # "edit" == "remove" in this context, so exclude from the new front.
+      if fi not in front_edits:
+        new_front.append(fi)
+        front_map[fi] = len(new_front) - 1
+
+    new_links = [(front_map[f1], front_map[f2])
+                 for (f1, f2) in self.links
+                 if front_map[f1] != front_map[f2]]
+    new_tags  = {}
+    for t in self.tags:
+      new_tags[t] = [front_map[fi] for fi in self.tags[t]]
+
+    self.front = new_front
+    self.links = new_links
+    self.tags  = new_tags
+    return self
+
+  def create_edges(self, front_edits):
+    # Edges are created for (1) any new links; and (2) any existing links whose
+    # endpoints have changed. In practice both of these cases are handled by
+    # consulting front_edits: new vertices are represented as edits of existing
+    # ones.
+    for (f1, f2) in self.links:
+      if f1 in front_edits or f2 in front_edits:
+        # We can refer directly into self.front[] like this because if the
+        # edge is new, it means we produced it by expanding the wavefront --
+        # and that means we have both the old and new points available.
+        # Non-new edges always correspond to links within the updated
+        # wavefront, which is also covered by what is now self.front[].
+        self.edges.append((self.front[f1], self.front[f2]))
+
+  def create_faces(self, front_edits):
+    # Faces are a lot like edges, except that we also need to consider the
+    # original point locations. Faces arise from links one or both of whose
+    # endpoints have moved, and there are two possibilities:
+    #
+    # 1. One endpoint moved: create a triangle
+    # 2. Both endpoints moved: create a quad
+    for (f1, f2) in self.links:
+      v1  = self.front[f1]
+      v2  = self.front[f2]
+      v10 = front_edits.get(f1, v1)
+      v20 = front_edits.get(f2, v2)
+
+      if v10 != v1 and v20 != v2: self.faces.append((v10, v1, v2, v20))
+      elif v10 != v1:             self.faces.append((v10, v1, v2))
+      elif v20 != v2:             self.faces.append(     (v1, v2, v20))
