@@ -11,15 +11,27 @@ from functools import reduce
 from .combinators import *
 from .basic       import *
 
+expr_globals = {
+  'Vector': Vector,
+  'Matrix': Matrix
+}
+
 exprs = alt()
 expr  = pmap(lambda xs: xs[1], seq(maybe(p_ignore), exprs, maybe(p_ignore)))
 
-compiled_expr = pmap(lambda body: eval(f'lambda state: {body}'), expr)
+compiled_expr = pmap(
+  lambda body: eval(f'lambda state: {body}', expr_globals),
+  expr)
 
 exprs.append(
+  pmap(lambda n: f'({n})', p_float),
+  pmap(lambda n: f'({n})', p_int),
+
   pmap(lambda ps: f'Vector(({ps[1]},0,0))', seq(re(br'x'), expr)),
   pmap(lambda ps: f'Vector((0,{ps[1]},0))', seq(re(br'y'), expr)),
   pmap(lambda ps: f'Vector((0,0,{ps[1]}))', seq(re(br'z'), expr)),
+
+  pmap(lambda ps: f'range(int({ps[1]}))', seq(re(br'i'), expr)),
 
   pmap(lambda ps: f'({ps[2]} > {ps[1]})',   seq(re(br'>'),  expr, expr)),
   pmap(lambda ps: f'({ps[2]} >= {ps[1]})',  seq(re(br'>='), expr, expr)),
@@ -28,10 +40,13 @@ exprs.append(
   pmap(lambda ps: f'({ps[2]} == {ps[1]})',  seq(re(br'=='), expr, expr)),
   pmap(lambda ps: f'(not {ps[1]})',         seq(re(br'!'),  expr)),
   pmap(lambda ps: f'({ps[2]} and {ps[1]})', seq(re(br'&'),  expr, expr)),
-  pmap(lambda ps: f'({ps[2]} or {ps[1]})',  seq(re(br'\|'),  expr, expr)),
+  pmap(lambda ps: f'({ps[2]} or {ps[1]})',  seq(re(br'\|'), expr, expr)),
 
   pmap(lambda ps: f'({ps[2]} if {ps[1]} else {ps[3]})',
        seq(re(br'\?'), expr, expr, expr)),
+
+  pmap(lambda ps: f'state.lerp({ps[1]}, {ps[2]}, {ps[3]})',
+       seq(re(br'\$'), expr, expr, expr)),
 
   pmap(lambda ps: f'(lambda state: {ps[1]})', seq(re(br'\\'), expr)),
   pmap(lambda ps: f'(state.invoke({ps[1]}, {ps[2]}))',
@@ -50,15 +65,18 @@ exprs.append(
        seq(re(br'\*\\'), expr, expr)),
   pmap(lambda ps: f'[x for x in {ps[2]} if state.invoke(x, lambda state: {ps[1]})]',
        seq(re(br'%\\'), expr, expr)),
-  pmap(lambda ps: f'reduce(lambda x: state.invoke(x, lambda state: {ps[1]}), {ps[2]})',
-       seq(re(br'/\\'), expr, expr)),
+  pmap(lambda ps: f'reduce(lambda x, y: state.invoke([x, y], lambda state: {ps[2]}), {ps[3]}, {ps[1]})',
+       seq(re(br'/\\'), expr, expr, expr)),
 
   pmap(lambda ps: f'({ps[2]}[int({ps[1]})])', seq(re(br'`'), expr, expr)),
+
+  pmap(lambda ps: f'({ps[2]} ** {ps[1]})', seq(re(br'\*\*'), expr, expr)),
 
   pmap(lambda ps: f'({ps[1]} + {ps[2]})', seq(re(br'\+'), expr, expr)),
   pmap(lambda ps: f'(- {ps[1]})',         seq(re(br'-'),  expr)),
   pmap(lambda ps: f'({ps[1]} * {ps[2]})', seq(re(br'\*'), expr, expr)),
   pmap(lambda ps: f'({ps[2]} / {ps[1]})', seq(re(br'/'),  expr, expr)),
+  pmap(lambda ps: f'({ps[2]} % {ps[1]})', seq(re(br'%'),  expr, expr)),
   pmap(lambda ps: f'({ps[1]} @ {ps[2]})', seq(re(br'\.'), expr, expr)),
 
   pmap(lambda xs: f'Vector(({xs[1]}, {xs[2]}, {xs[3]}))',
@@ -75,9 +93,6 @@ exprs.append(
 
   # Python expressions within {}
   pmap(lambda ms: f'({ms[0].decode()})', re(br'\{([^\}]+)\}')),
-
-  pmap(lambda n: f'({n})', p_float),
-  pmap(lambda n: f'({n})', p_int),
 )
 
 class expr_state:
@@ -85,14 +100,14 @@ class expr_state:
   Dynamic state for expression evaluation. This state tracks local variables,
   transformation matrices, and any other relevant stuff.
   """
-  def __init__(self, *vs, arg=None, parent=None, transform=Matrix.Identity(3)):
-    self.parent    = parent
-    self.arg       = arg
-    self.vs        = dict(vs)
-    self.transform = transform
+  def __init__(self, *vs, arg=None, parent=None):
+    self.parent = parent
+    self.arg    = arg
+    self.vs     = dict(vs)
 
   def __getitem__(self, v):
-    return self.vs[v] if v in self.vs else self.parent[v]
+    if v in self.vs: return self.vs[v]
+    return None if self.parent is None else self.parent[v]
 
   def let(self, v, val, expr):
     return expr(expr_state((v, val), parent=self))
@@ -106,3 +121,6 @@ class expr_state:
 
   def get_arg(self):
     return self.arg if self.arg is not None else self.parent.get_arg()
+
+  def lerp(self, f, x, y):
+    return x * (1 - f) + y * f

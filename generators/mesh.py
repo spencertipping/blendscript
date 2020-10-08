@@ -169,7 +169,7 @@ class frontier:
 
     # Displace the target if any displacement was requested. Otherwise we're
     # just collapsing the selected points to wherever the target is now.
-    if dv is not None:
+    if dv is not None and dv != Vector((0, 0, 0)):
       front_edits[tfi] = self.front[tfi]
       self.front[tfi] = self.vertex(self.vertices[self.front[tfi]] + dv)
 
