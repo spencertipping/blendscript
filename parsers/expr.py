@@ -7,13 +7,15 @@ and matrix expressions. The result is compiled into a Python function.
 
 from mathutils import Matrix, Vector
 from functools import reduce
+from itertools import chain
 
 from .combinators import *
 from .basic       import *
 
 expr_globals = {
   'Vector': Vector,
-  'Matrix': Matrix
+  'Matrix': Matrix,
+  'chain': chain
 }
 
 exprs = alt()
@@ -72,6 +74,8 @@ exprs.append(
 
   pmap(lambda ps: f'({ps[2]} ** {ps[1]})', seq(re(br'\*\*'), expr, expr)),
 
+  pmap(lambda ps: f'list(chain(*({ps[1]})))', seq(re(br'\+\+'), expr)),
+
   pmap(lambda ps: f'({ps[1]} + {ps[2]})', seq(re(br'\+'), expr, expr)),
   pmap(lambda ps: f'(- {ps[1]})',         seq(re(br'-'),  expr)),
   pmap(lambda ps: f'({ps[1]} * {ps[2]})', seq(re(br'\*'), expr, expr)),
@@ -84,11 +88,11 @@ exprs.append(
 
   pmap(lambda ps: ps[1], seq(re(br'\('), expr, re(br'\)'))),
 
-  pmap(lambda ps: f'(state["{ps[1]}"])', seq(re(br':'), p_word)),
-  pmap(lambda ps: f'(state.let("{ps[1]}", {ps[2]}, lambda state: {ps[3]}))',
+  pmap(lambda ps: f'(state["{ps[1].decode()}"])', seq(re(br':'), p_word)),
+  pmap(lambda ps: f'(state.let("{ps[1].decode()}", {ps[2]}, lambda state: {ps[3]}))',
        seq(re(br'l\s*'), p_word, expr, expr)),
 
-  pmap(lambda ps: f'(state.set("{ps[1]}", {ps[2]}), {ps[3]})[1]',
+  pmap(lambda ps: f'(state.set("{ps[1].decode()}", {ps[2]}), {ps[3]})[1]',
        seq(re(br'=\s*'), p_word, expr, expr)),
 
   # Python expressions within {}

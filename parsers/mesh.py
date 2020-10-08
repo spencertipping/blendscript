@@ -36,24 +36,20 @@ from ..generators.mesh import frontier
 from .combinators      import *
 from .expr             import *
 
-def frontier_add(f, name):
-  m = f.mesh(name)
-  o = bpy.data.objects.new(name, m)
+def frontier_add(fns, name):
+  f = frontier(init_tag="o")
+  for fn in fns:
+    f = fn(f)
+  o = bpy.data.objects.new(name, f.mesh(name))
   bpy.context.scene.collection.objects.link(o)
   return o
 
-expr_globals['frontier'] = frontier
+expr_globals['frontier']     = frontier
 expr_globals['frontier_add'] = frontier_add
 
-meshcmd = alt()
-
-# TODO: make these into first-class objects so we can emit them from looping
-# constructs
 exprs.append(
-  pmap(lambda ps: ''.join(['frontier_add(',
-                           ".".join(['frontier(init_tag="o")', *ps[3]]),
-                           f', "{ps[1].decode()}")']),
-       seq(re(br'M'), p_word, re(br'\['), rep(meshcmd), re(br'\]'))))
+  pmap(lambda ps: f'frontier_add({ps[2]}, "{ps[1].decode()}")',
+       seq(re(br'M'), p_word, expr)))
 
 edge_face_spec = alt(
   const(['edges=False,faces=False'], re(br'j')),
@@ -66,12 +62,12 @@ def tag_spec(kwarg_name):
               seq(maybe(pmap(lambda ps: f'query="{ps[0].decode()}"', re(br'/(\w+)'))),
                   maybe(pmap(lambda ps: f'{kwarg_name}="{ps[0].decode()}"', re(br'>(\w+)')))))
 
-meshcmd.append(
-  pmap(lambda xs: f'extrude({xs[3]}, {",".join(["expand=True", *(xs[1] + xs[2])])})',
+exprs.append(
+  pmap(lambda xs: f'lambda f: f.extrude({xs[3]}, {",".join(["expand=True", *(xs[1] + xs[2])])})',
        seq(re(br'e'), edge_face_spec, tag_spec("tag_as"), expr)),
 
-  pmap(lambda xs: f'extrude({xs[3]}, {",".join(["expand=False", *(xs[1] + xs[2])])})',
+  pmap(lambda xs: f'lambda f: f.extrude({xs[3]}, {",".join(["expand=False", *(xs[1] + xs[2])])})',
        seq(re(br'r'), edge_face_spec, tag_spec("tag_as"), expr)),
 
-  pmap(lambda xs: f'collapse(dv={xs[3]}, {",".join(xs[1] + xs[2])})',
+  pmap(lambda xs: f'lambda f: f.collapse(dv={xs[3]}, {",".join(xs[1] + xs[2])})',
        seq(re(br'c'), edge_face_spec, tag_spec("target"), expr)))
