@@ -15,8 +15,9 @@ BlendScript is largely expression-driven and is parsed using combinatory PEG.
 
 # TODO BlendScript examples
 
-from .parsers.expr import compiled_expr
-from .parsers.mesh import *
+from .parsers.expr            import *
+from .parsers.mesh            import *
+from .parsers.blender_objects import *
 
 def compile(source):
   """

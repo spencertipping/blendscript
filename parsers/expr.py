@@ -19,11 +19,11 @@ All global values available to compiled code. Modify this with
 defexprglobals().
 """
 
-expr_ops  = dsp()
-expr_lits = alt()
+expr_ops      = dsp()
+expr_literals = alt()
 
 expr = pmap(lambda xs: xs[1], seq(maybe(p_ignore),
-                                  alt(expr_ops, expr_lits),
+                                  alt(expr_ops, expr_literals),
                                   maybe(p_ignore)))
 """
 A recursive grammar element that evaluates to any expression, possibly
@@ -46,19 +46,17 @@ def defexprliteral(*ps):
   Defines new literal forms, each a bare parser consuming input and producing a
   Python expression as a string.
   """
-  expr_lits.add(*ps)
+  expr_literals.add(*ps)
 
 def defexprglobals(**gs):
   """
   Binds new globals within the compiled environment.
   """
   for g, v in gs.items():
-    if g in expr_globals:
-      raise Exception(f'defexprglobals: {g} is already defined')
+    if g in expr_globals and expr_globals[g] != v:
+      raise Exception(f'defexprglobals: {g} is already defined as a different value')
     expr_globals[g] = v
 
-
-defexprglobals(Vector=Vector, Matrix=Matrix, chain=chain)
 
 defexprliteral(
   pmap(lambda n:  f'({n})', p_float),
@@ -68,17 +66,24 @@ defexprliteral(
   # Parens have no effect, they just help legibility
   pmap(lambda ps: ps[1], seq(re(br'\('), expr, re(br'\)'))),
 
-  pmap(lambda ps: f'(state["{ps[1].decode()}"])', seq(re(r':'), p_word)),
-
   # Python expressions within {}
   pmap(lambda ms: f'({ms[0].decode()})', re(br'\{([^\}]+)\}')),
 
   # TODO: better lambda arg syntax (should just bind a name)
-  const('state.get_arg()', re(br'_')))
+  const('state.get_arg()', re(br'_')),
+
+  # Last resort: assume it's a variable. In practice this case will probably
+  # get used frequently.
+  #pmap(lambda x: f'(state["{x.decode()}"])', p_word))
+)
 
 def unop(f):   return pmap(f, expr)
 def binop(f):  return pmap(lambda xs: f(*xs), seq(expr, expr))
 def ternop(f): return pmap(lambda xs: f(*xs), seq(expr, expr, expr))
+
+defexprglobals(Vector=Vector,
+               Matrix=Matrix,
+               chain=chain)
 
 defexprop(**{
   'x': unop(lambda x: f'Vector(({x},0,0))'),
@@ -128,13 +133,13 @@ defexprop(**{
 
   'v': ternop(lambda x, y, z: f'Vector(({x}, {y}, {z}))'),
 
-  'L': pmap(lambda ps:
-            f'(state.let("{ps[1].decode()}", {ps[2]}, lambda state: {ps[3]}))',
-            seq(maybe(p_ignore), p_word, expr, expr)),
+  '::': pmap(lambda ps:
+             f'(state.let("{ps[0].decode()}", {ps[1]}, lambda state: {ps[2]}))',
+             seq(p_word, expr, expr)),
 
-  '=': pmap(lambda ps:
-            f'(state.set("{ps[1].decode()}", {ps[2]}), {ps[3]})[1]',
-            seq(maybe(p_ignore), p_word, expr, expr))})
+  ':=': pmap(lambda ps:
+             f'(state.set("{ps[0].decode()}", {ps[1]}), {ps[2]})[1]',
+             seq(p_word, expr, expr))})
 
 
 # TODO: figure out what we're doing with eval_state and dynamically-scoped
@@ -170,3 +175,9 @@ class expr_eval_state:
 
   def lerp(self, f, x, y):
     return x * (1 - f) + y * f
+
+  def do(self, x, f):
+    f(x)
+    return x
+
+defexprglobals(expr_eval_state=expr_eval_state)

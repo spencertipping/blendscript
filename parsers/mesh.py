@@ -40,15 +40,13 @@ def frontier_add(fns, name):
   f = frontier(init_tag="o")
   for fn in fns:
     f = fn(f)
-  o = bpy.data.objects.new(name, f.mesh(name))
-  bpy.context.scene.collection.objects.link(o)
-  return o
+  return f.mesh(name)
 
 defexprglobals(frontier=frontier, frontier_add=frontier_add)
 
-defexprop(
-  M=pmap(lambda ps: f'frontier_add({ps[1]}, "{ps[0].decode()}")',
-         seq(p_word, expr)))
+defexprop(**{
+  'M:': pmap(lambda ps: f'frontier_add({ps[1]}, "{(ps[0] or b"").decode()}")',
+             seq(maybe(p_word), expr))})
 
 edge_face_spec = alt(
   const(['edges=False,faces=False'], re(r'j')),
@@ -57,18 +55,19 @@ edge_face_spec = alt(
   const(['edges=True,faces=True'],   re(r'a')))
 
 def tag_spec(kwarg_name):
-  return pmap(lambda ps: list(filter(None, ps)),
-              seq(maybe(pmap(lambda ps: f'query="{ps[0].decode()}"', re(r'/(\w+)'))),
-                  maybe(pmap(lambda ps: f'{kwarg_name}="{ps[0].decode()}"', re(r'>(\w+)')))))
+  return pmap(
+    lambda ps: list(filter(None, ps)),
+    seq(maybe(pmap(lambda ps: f'query="{ps[0].decode()}"', re(r'/(\w+)'))),
+        maybe(pmap(lambda ps: f'{kwarg_name}="{ps[0].decode()}"', re(r'>(\w+)')))))
 
 # TODO: better operator allocation; seems silly to have three toplevel letters
 # for these
-defexprop(
-  e=pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=True", *(xs[0] + xs[1])])})',
-         seq(edge_face_spec, tag_spec("tag_as"), expr)),
+defexprop(**{
+  'e': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=True", *(xs[0] + xs[1])])})',
+            seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  r=pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=False", *(xs[0] + xs[1])])})',
-         seq(edge_face_spec, tag_spec("tag_as"), expr)),
+  'r': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=False", *(xs[0] + xs[1])])})',
+            seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  c=pmap(lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
-         seq(edge_face_spec, tag_spec("target"), expr)))
+  'c': pmap(lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
+            seq(edge_face_spec, tag_spec("target"), expr))})
