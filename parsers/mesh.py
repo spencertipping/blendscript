@@ -49,11 +49,14 @@ def tag_spec(kwarg_name):
         maybe(pmap(lambda w: f'{kwarg_name}="{w.decode()}"', re(r'>(\w+)')))))
 
 defexprop(**{
-  'M*': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=True", *(xs[0] + xs[1])])})',
-             seq(edge_face_spec, tag_spec("tag_as"), expr)),
+  'M*': pmap(
+    lambda xs: f'lambda f: f.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  'M':  pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=False", *(xs[0] + xs[1])])})',
-             seq(edge_face_spec, tag_spec("tag_as"), expr)),
+  'M':  pmap(
+    lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  'M/': pmap(lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
-             seq(edge_face_spec, tag_spec("target"), expr))})
+  'M/': pmap(
+    lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
+    seq(edge_face_spec, tag_spec("target"), expr))})
