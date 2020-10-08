@@ -48,7 +48,7 @@ defexprop(**{
     lambda ps: (f'state.do({ps[1]}, lambda x: bpy.context.scene.collection.' \
                 f'objects.link(bpy.data.objects.new' \
                 f'("{(ps[0] or b"").decode()}", x)))'),
-    seq(maybe(p_word), expr))})
+    seq(maybe(p_lword), expr))})
 
 if len(unsupported_bpy_datas):
   print(f'BlendScript warning: disabling the following unavailable entries '

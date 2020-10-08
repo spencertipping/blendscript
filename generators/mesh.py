@@ -1,23 +1,11 @@
 """
-Objects and basic object interactions.
-
-In terms of object creation, I think it's fine if we always start with a single
-point and proceed inductively, with each step one of a few operations:
-
-1. Extrude along vector, expanding frontier and connecting with edges
-2. Extrude along vector, expanding frontier and connecting with edges+faces
-3. Extrude along vector, replacing frontier and connecting with edges
-4. Extrude along vector, replacing frontier and connecting with edges+faces
-5. Collapse frontier, connecting with edges
-6. Collapse frontier, connecting with edges+faces
-
-For example, a 1x1x1 cube works like this:
+A frontier-extrusion mesh generator.
 
 > f = frontier()
-> m = f.extrude(Vector((1, 0, 0)), expand=True,  edges=True)
->      .extrude(Vector((0, 1, 0)), expand=True,  edges=True, faces=True)
->      .extrude(Vector((0, 0, 1)), expand=False, edges=True, faces=True)
->      .collapse(edges=True, faces=True)
+> m = f.expand(Vector((1, 0, 0)),  edges=True)
+>      .expand(Vector((0, 1, 0)),  edges=True, faces=True)
+>      .extrude(Vector((0, 0, 1)), edges=True, faces=True)
+>      .collapse(                  edges=True, faces=True)
 >      .mesh('cube')
 """
 
@@ -93,15 +81,12 @@ class frontier:
     m.update()
     return m
 
-  def extrude(self, dv, query=None, tag_as=None,
-              expand=False, edges=True, faces=False):
+  def expand(self, dv, query=None, tag_as=None, edges=True, faces=False):
     """
-    Extrudes the wavefront (or a subset) along a vector, connecting the new
-    frontier points either with edges or with faces. New points be assigned any
-    new tag you specify.
-
-    If you expand the frontier, new vertices will be linked to the vertices
-    they came from.
+    Expands the wavefront (or a subset) along a vector, connecting the new
+    frontier points with edges, faces, neither, or both. All existing wavefront
+    points will remain there, and any displaced point will be added as a new
+    wavefront element.
     """
     # front_edits[fi] = vi0, where self.vertices[vi0] is the original location
     # for the front point now at fi. We use this for fast "did-it-change"
@@ -111,33 +96,46 @@ class frontier:
     if tag_as is not None and tag_as not in self.tags:
       self.tags[tag_as] = []
 
-    if expand:
-      # Extrude each point by calculating its new location, adding it to the
-      # mesh, and logging a new link between the original and the new one.
-      front_moves = {}
-      for fi in self.select(query):
-        vi = self.front[fi]
-        self.front.append(self.vertex(self.vertices[vi] + dv))
-        new_fi = len(self.front) - 1
-        front_edits[new_fi] = vi
-        front_moves[fi] = new_fi
-        self.links.append((fi, new_fi))
-        if tag_as is not None: self.tags[tag_as].append(new_fi)
+    # Extrude each point by calculating its new location, adding it to the
+    # mesh, and creating a new link between the original and the new one.
+    front_moves = {}
+    for fi in self.select(query):
+      vi = self.front[fi]
+      self.front.append(self.vertex(self.vertices[vi] + dv))
+      new_fi = len(self.front) - 1
+      front_edits[new_fi] = vi
+      front_moves[fi] = new_fi
+      self.links.append((fi, new_fi))
+      if tag_as is not None: self.tags[tag_as].append(new_fi)
 
-      # If f1 and/or f2 refer to points that have moved, add a new edge to the
-      # destination.
-      for (f1, f2) in self.links:
-        if f1 in front_moves or f2 in front_moves:
-          self.links.append((front_moves.get(f1, f1), front_moves.get(f2, f2)))
+    # If f1 and/or f2 refer to points that have moved, add a new edge to the
+    # destination.
+    for (f1, f2) in self.links:
+      if f1 in front_moves or f2 in front_moves:
+        self.links.append((front_moves.get(f1, f1), front_moves.get(f2, f2)))
 
-    else:
-      # Replace self.front[] entries with new extruded vertices. No new links
-      # are created.
-      for fi in self.select(query):
-        vi = self.front[fi]
-        self.front[fi] = self.vertex(self.vertices[vi] + dv)
-        front_edits[fi] = vi
-        if tag_as is not None: self.tags[tag_as].append(fi)
+    if edges: self.create_edges(front_edits)
+    if faces: self.create_faces(front_edits)
+    return self
+
+  def extrude(self, dv, query=None, tag_as=None, edges=True, faces=False):
+    """
+    Extrudes the wavefront (or a subset) along a vector, connecting the new
+    frontier points with edges, faces, neither, or both. The wavefront's size
+    won't change during this operation.
+    """
+    front_edits = {}
+
+    if tag_as is not None and tag_as not in self.tags:
+      self.tags[tag_as] = []
+
+    # Replace self.front[] entries with new extruded vertices. No new links
+    # are created.
+    for fi in self.select(query):
+      vi = self.front[fi]
+      self.front[fi] = self.vertex(self.vertices[vi] + dv)
+      front_edits[fi] = vi
+      if tag_as is not None: self.tags[tag_as].append(fi)
 
     if edges: self.create_edges(front_edits)
     if faces: self.create_faces(front_edits)

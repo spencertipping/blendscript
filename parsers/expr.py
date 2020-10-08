@@ -120,6 +120,8 @@ defexprop(**{
     f'reduce(lambda x, y: state.invoke(lambda state: {y}, [x, y]), {z}, {x})'),
 
   '`': binop(lambda x, y: f'({y}[int({x})])'),
+  '`[': pmap(lambda ps: f'({",".join(ps[0])})[-1]',
+             seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),
   '++': unop( lambda x:    f'list(chain(*({x})))'),

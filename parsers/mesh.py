@@ -1,33 +1,21 @@
 """
 Mesh creation via the frontier generator.
 
-This module adds the M<name>[ops...] expression to the "expr" grammar alt,
-making it possible to create meshes and use them as expression values.
+There are three basic mesh frontier operations:
 
-"frontier" defines two main operations, extrude and collapse, which
-collectively expand into a number of logical elements:
+1. Expand wavefront
+2. Extrude wavefront
+3. Collapse wavefront
 
-1. Extrude+expand  dv {tagged|all} {->tag|nop} edges? faces?
-2. Extrude+replace dv {tagged|all} {->tag|nop} edges? faces?
-3. Collapse           {tagged|all} {->tag|nop} edges? faces?
-4. Collapse dv        {tagged|all} {->tag|nop} edges? faces?
+Each has the following options:
 
-We can merge (3) and (4) by specifying a zero displacement for two bytes: x0.
-This means we really have three functions, each with identical operands:
+1. dv: the displacement vector (required)
+2. query: a tag to specify input points
+3. tag_as: a tag for output
+4. edges?: True to emit edges along the extrusion
+5. faces?: True to emit faces along the extrusion
 
-1. Extrude+expand  dv {tagged|all} {->tag|nop} edges? faces?
-2. Extrude+replace dv {tagged|all} {->tag|nop} edges? faces?
-3. Collapse dv        {tagged|all} {->tag|nop} edges? faces?
-
-The edge/face flags can also be collapsed into a single byte following the
-operator: "j" for jump (neither), "e" for edges only, "f" for faces only, and
-"a" for all. As for the operators themselves, "e", "r", and "c" should work for
-(1), (2), and (3) respectively.
-
-Now all we have left is to encode the tag arguments, which amount to two words
-each of which is optional. If we place these before the displacement vector
-expression, we can use arbitrary syntax; let's go with `/` for the query and
-`>` for the destination or new tag.
+TODO: replace dv with an arbitrary transform
 """
 
 import bpy
@@ -46,7 +34,7 @@ defexprglobals(frontier=frontier, frontier_add=frontier_add)
 
 defexprop(**{
   'M:': pmap(lambda ps: f'frontier_add({ps[1]}, "{(ps[0] or b"").decode()}")',
-             seq(maybe(p_word), expr))})
+             seq(maybe(p_lword), expr))})
 
 edge_face_spec = alt(
   const(['edges=False,faces=False'], re(r'j')),
@@ -57,17 +45,15 @@ edge_face_spec = alt(
 def tag_spec(kwarg_name):
   return pmap(
     lambda ps: list(filter(None, ps)),
-    seq(maybe(pmap(lambda ps: f'query="{ps[0].decode()}"', re(r'/(\w+)'))),
-        maybe(pmap(lambda ps: f'{kwarg_name}="{ps[0].decode()}"', re(r'>(\w+)')))))
+    seq(maybe(pmap(lambda w: f'query="{w.decode()}"', re(r'/(\w+)'))),
+        maybe(pmap(lambda w: f'{kwarg_name}="{w.decode()}"', re(r'>(\w+)')))))
 
-# TODO: better operator allocation; seems silly to have three toplevel letters
-# for these
 defexprop(**{
-  'e': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=True", *(xs[0] + xs[1])])})',
-            seq(edge_face_spec, tag_spec("tag_as"), expr)),
+  'M*': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=True", *(xs[0] + xs[1])])})',
+             seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  'r': pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=False", *(xs[0] + xs[1])])})',
-            seq(edge_face_spec, tag_spec("tag_as"), expr)),
+  'M':  pmap(lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join(["expand=False", *(xs[0] + xs[1])])})',
+             seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
-  'c': pmap(lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
-            seq(edge_face_spec, tag_spec("target"), expr))})
+  'M/': pmap(lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
+             seq(edge_face_spec, tag_spec("target"), expr))})

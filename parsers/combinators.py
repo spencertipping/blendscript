@@ -40,7 +40,7 @@ def lit(k):
     return (sub, i + len(k)) if sub == k else fail(None)
   return parserify(f)
 
-def re(r):
+def re(*rs):
   """
   Parses a regular expression, returning the entire matched area (if the regex
   defines no groups), the contents of the only match group (if the regex
@@ -49,8 +49,8 @@ def re(r):
   number of groups _defined by the regex_, not necessarily the number _that
   match_.
   """
-  if type(r) == str: r = r.encode()
-  r = regex.compile(r)
+  rs = [f'(?:{r})' if type(r) == str else f'(?:{r.decode()})' for r in rs]
+  r  = regex.compile(b'|'.join([r.encode() for r in rs]))
   def f(s, i):
     m = r.match(memoryview(s)[i:])
     if m is None: return fail(None)
