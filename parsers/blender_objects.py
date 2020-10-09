@@ -62,9 +62,9 @@ defexprliteral(blender_object_parser)
 
 
 def blender_add_object(name, obj):
-  bpy.context.scene.collection.objects.link(
-    bpy.data.objects.new(name, obj))
-  return obj.name
+  linked_obj = bpy.data.objects.new(name, obj)
+  bpy.context.scene.collection.objects.link(linked_obj)
+  return linked_obj.name
 
 
 defexprglobals(bpy=bpy,

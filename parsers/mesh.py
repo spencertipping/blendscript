@@ -50,13 +50,13 @@ def tag_spec(kwarg_name):
 
 defexprop(**{
   'M*': pmap(
-    lambda xs: f'lambda _: _.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    lambda xs: f'FN(lambda _m: _m.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'M':  pmap(
-    lambda xs: f'lambda _: _.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    lambda xs: f'FN(lambda _m: _m.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'M/': pmap(
-    lambda xs: f'lambda _: _.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
+    lambda xs: f'FN(lambda _m: _m.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])}))',
     seq(edge_face_spec, tag_spec("target"), expr))})

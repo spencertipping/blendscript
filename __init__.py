@@ -35,7 +35,9 @@ blendscript.run(r'''
 
 from .parsers.expr            import *
 from .parsers.mesh            import *
+from .parsers.transformation  import *
 from .parsers.blender_objects import *
+
 
 def compile(source):
   """
@@ -54,6 +56,7 @@ def compile(source):
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
 
   return f
+
 
 def run(source):
   """
