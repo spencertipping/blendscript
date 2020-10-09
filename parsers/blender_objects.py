@@ -1,5 +1,23 @@
 """
 Blender object references (by name)
+
+This module defines two things. First, each object type gets a series of
+namespaced accessors starting with two-letter prefixes of the type and
+proceeding up to the full type name. For example, you could refer to a mesh
+called "Cube" using any of these words:
+
+me/Cube
+mes/Cube
+mesh/Cube
+meshe/Cube
+meshes/Cube
+
+Most of the time these prefixes don't collide, but when they do, for instance
+for "screens" and "scenes", "sc/X" would retrieve either.
+
+The other thing this module defines is the "B:" operator, which creates a
+Blender object and links it into the scene. You can use this to finalize "M:"
+meshes.
 """
 
 import bpy
@@ -21,7 +39,7 @@ def bpy_data_parser_ops(names):
   prefixes = {}
   for n in names:
     p = bpy_data_parser(n)
-    for i in range(1, len(n) + 1):
+    for i in range(2, len(n) + 1):
       sub = n[:i]
       if sub not in prefixes: prefixes[sub] = alt()
       prefixes[sub].add(p)
@@ -41,14 +59,20 @@ blender_object_parser = \
               for k, p in bpy_data_parser_ops(bpy_parsers).items()]))
 
 defexprliteral(blender_object_parser)
-defexprglobals(bpy=bpy)
+
+
+def blender_add_object(name, obj):
+  bpy.context.scene.collection.objects.link(
+    bpy.data.objects.new(name, obj))
+  return obj.name
+
+
+defexprglobals(bpy=bpy,
+               blender_add_object=blender_add_object)
 
 defexprop(**{
-  'B:': pmap(
-    lambda ps: (f'state.do({ps[1]}, lambda x: bpy.context.scene.collection.' \
-                f'objects.link(bpy.data.objects.new' \
-                f'("{(ps[0] or b"").decode()}", x)))'),
-    seq(maybe(p_lword), expr))})
+  'B:': pmap(lambda ps: f'blender_add_object("{ps[0] or ""}", {ps[1]})',
+             seq(maybe(p_lword), expr))})
 
 if len(unsupported_bpy_datas):
   print(f'BlendScript warning: disabling the following unavailable entries '

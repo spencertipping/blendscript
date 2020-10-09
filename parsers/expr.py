@@ -8,6 +8,7 @@ and matrix expressions. The result is compiled into a Python function.
 from mathutils import Matrix, Vector
 from functools import reduce
 from itertools import chain
+from math      import pi
 
 from .combinators import *
 from .basic       import *
@@ -31,7 +32,7 @@ surrounded by whitespace and comments.
 """
 
 compiled_expr = pmap(
-  lambda body: eval(f'lambda state: {body}', expr_globals),
+  lambda body: eval(f'lambda: {body}', expr_globals),
   expr)
 
 
@@ -58,6 +59,9 @@ def defexprglobals(**gs):
     expr_globals[g] = v
 
 
+defexprglobals(tau = pi * 2)
+
+
 defexprliteral(
   pmap(lambda n:  f'({n})', p_float),
   pmap(lambda n:  f'({n})', p_int),
@@ -69,13 +73,10 @@ defexprliteral(
   # Python expressions within {}
   pmap(lambda ms: f'({ms[0].decode()})', re(br'\{([^\}]+)\}')),
 
-  # TODO: better lambda arg syntax (should just bind a name)
-  const('state.get_arg()', re(br'_')),
-
   # Last resort: assume it's a variable. In practice this case will probably
   # get used frequently.
-  #pmap(lambda x: f'(state["{x.decode()}"])', p_word))
-)
+  p_lword)
+
 
 def unop(f):   return pmap(f, expr)
 def binop(f):  return pmap(lambda xs: f(*xs), seq(expr, expr))
@@ -102,24 +103,22 @@ defexprop(**{
   '|':  binop(lambda x, y: f'({y} or {x})'),
 
   '?': ternop(lambda x, y, z: f'({y} if {x} else {z})'),
-  '$': ternop(lambda x, y, z: f'state.lerp({x}, {y}, {z})'),
 
-  # TODO: fix lambda stuff; these can probably just be python functions, not
-  # state-things
-  '\\': unop(lambda x: f'(lambda state: {x})'),
-  '@':  binop(lambda x, y: f'(state.invoke({y}, {x}))'),
+  '\\': pmap(lambda ps: f'(lambda {ps[0] or "_"}: {ps[1]})',
+             seq(maybe(p_lword), expr)),
 
-  '.':  pmap(lambda ps: f'{ps[1]}.{ps[0].decode()}', seq(p_word, expr)),
-  '.@': pmap(lambda ps: f'{ps[2]}.{ps[0].decode()}(*{ps[1]})',
+  '@':  binop(lambda x, y: f'({y}({x}))'),
+  '@*': binop(lambda x, y: f'({y}(*{x}))'),
+
+  '.':  pmap(lambda ps: f'{ps[1]}.{ps[0]}', seq(p_word, expr)),
+  '.@': pmap(lambda ps: f'{ps[2]}.{ps[0]}(*{ps[1]})',
              seq(p_word, expr, expr)),
 
-  '*\\': binop(lambda x, y: f'[state.invoke(lambda state: {x}, v) for v in {y}]'),
-  '%\\': binop(lambda x, y: f'[v for v in {y} if state.invoke(lambda state: {x})]'),
-  '/\\': ternop(
-    lambda x, y, z:
-    f'reduce(lambda x, y: state.invoke(lambda state: {y}, [x, y]), {z}, {x})'),
+  '*\\': binop(lambda f, l: f'[{f}(v) for v in {l}]'),
+  '%\\': binop(lambda f, l: f'[v for v in {l} if {f}(v)]'),
+  '/\\': ternop(lambda i, f, l: f'reduce(lambda *_: {f}(_), {l}, {i})'),
 
-  '`': binop(lambda x, y: f'({y}[int({x})])'),
+  '`': binop(lambda i, xs: f'({xs}[int({i})])'),
   '`[': pmap(lambda ps: f'({",".join(ps[0])})[-1]',
              seq(rep(expr, min=1), re(r'\]'))),
 
@@ -135,51 +134,5 @@ defexprop(**{
 
   'v': ternop(lambda x, y, z: f'Vector(({x}, {y}, {z}))'),
 
-  '::': pmap(lambda ps:
-             f'(state.let("{ps[0].decode()}", {ps[1]}, lambda state: {ps[2]}))',
-             seq(p_word, expr, expr)),
-
-  ':=': pmap(lambda ps:
-             f'(state.set("{ps[0].decode()}", {ps[1]}), {ps[2]})[1]',
-             seq(p_word, expr, expr))})
-
-
-# TODO: figure out what we're doing with eval_state and dynamically-scoped
-# semantics. Could be a cool thing if we rely only on state methods; then we
-# have context-sensitive semantic overloading.
-
-class expr_eval_state:
-  """
-  Dynamic state for expression evaluation. This state tracks local variables,
-  transformation matrices, and any other relevant stuff.
-  """
-  def __init__(self, *vs, arg=None, parent=None):
-    self.parent = parent
-    self.arg    = arg
-    self.vs     = dict(vs)
-
-  def __getitem__(self, v):
-    if v in self.vs: return self.vs[v]
-    return None if self.parent is None else self.parent[v]
-
-  def let(self, v, val, expr):
-    return expr(expr_eval_state((v, val), parent=self))
-
-  def set(self, v, val):
-    self.vs[v] = val
-    return self
-
-  def invoke(self, fn, arg):
-    return fn(expr_eval_state(arg=arg, parent=self))
-
-  def get_arg(self):
-    return self.arg if self.arg is not None else self.parent.get_arg()
-
-  def lerp(self, f, x, y):
-    return x * (1 - f) + y * f
-
-  def do(self, x, f):
-    f(x)
-    return x
-
-defexprglobals(expr_eval_state=expr_eval_state)
+  '::': pmap(lambda ps: f'(lambda {ps[0]}: {ps[2]})({ps[1]})',
+             seq(p_lword, expr, expr))})

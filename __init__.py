@@ -1,5 +1,6 @@
 """
-Blender scripting language with a focus on brevity.
+Blender scripting language with a focus on brevity
+==================================================
 
 The goal is to make it possible to drive Blender using just a script and using
 fewer keystrokes than you'd use against the normal UI. This library is oriented
@@ -11,6 +12,23 @@ BlendScript is largely expression-driven and is parsed using combinatory PEG.
 + parsers/basic.py       : shared lexer basics (numbers, comments, etc)
 + parsers/expr.py        : Polish-notation expression language
 + parsers/mesh.py        : mesh expr extensions
+
+
+Usage
+=====
+
+Create a Python script and use this template:
+
+```
+import sys
+sys.path.append("/path/containing/blendscript")
+
+import blendscript
+
+blendscript.run(r'''
+# your code here
+''')
+```
 """
 
 # TODO BlendScript examples
@@ -35,15 +53,10 @@ def compile(source):
   if i != len(source): raise Exception(
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
 
-  def compiled(state=expr_eval_state()): return f(state)
-  return compiled
+  return f
 
-def run(source, eval_state=None):
+def run(source):
   """
   Runs the given source directly. This is a shorthand for compile(source)().
   """
-  f = compile(source)
-  if eval_state is not None:
-    return f(eval_state)
-  else:
-    return f()
+  return compile(source)()

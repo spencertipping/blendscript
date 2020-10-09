@@ -15,7 +15,7 @@ Each has the following options:
 4. edges?: True to emit edges along the extrusion
 5. faces?: True to emit faces along the extrusion
 
-TODO: replace dv with an arbitrary transform
+TODO at some point: arbitrary point->point transforms, not just dv
 """
 
 import bpy
@@ -33,7 +33,7 @@ def frontier_add(fns, name):
 defexprglobals(frontier=frontier, frontier_add=frontier_add)
 
 defexprop(**{
-  'M:': pmap(lambda ps: f'frontier_add({ps[1]}, "{(ps[0] or b"").decode()}")',
+  'M:': pmap(lambda ps: f'frontier_add({ps[1]}, "{ps[0]}")',
              seq(maybe(p_lword), expr))})
 
 edge_face_spec = alt(
@@ -50,13 +50,13 @@ def tag_spec(kwarg_name):
 
 defexprop(**{
   'M*': pmap(
-    lambda xs: f'lambda f: f.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    lambda xs: f'lambda _: _.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'M':  pmap(
-    lambda xs: f'lambda f: f.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
+    lambda xs: f'lambda _: _.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])})',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'M/': pmap(
-    lambda xs: f'lambda f: f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
+    lambda xs: f'lambda _: _.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])})',
     seq(edge_face_spec, tag_spec("target"), expr))})
