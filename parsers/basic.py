@@ -14,7 +14,3 @@ p_float = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
 p_comment    = re(r'#.*\n?')
 p_whitespace = re(r'\s+')
 p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
-
-
-def p_member_of(h, p):
-  return pmap(lambda s: h[s], pif(lambda s: s in h, p))

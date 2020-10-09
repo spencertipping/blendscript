@@ -7,18 +7,11 @@ fewer keystrokes than you'd use against the normal UI. This library is oriented
 towards CAD, engineering, and precision editing.
 
 BlendScript is largely expression-driven and is parsed using combinatory PEG.
-
-+ parsers/combinators.py : PEG library
-+ parsers/basic.py       : shared lexer basics (numbers, comments, etc)
-+ parsers/expr.py        : Polish-notation expression language
 """
 
 import bpy
 
-from .parsers.expr            import *
-from .parsers.mesh.frontier   import *
-from .parsers.transformation  import *
-from .parsers.blender_objects import *
+from .parsers import expr
 
 
 bl_info = {
@@ -36,7 +29,7 @@ def compile(source):
   the evaluation state.
   """
   if type(source) == str: source = source.encode()
-  f, i = compiled_expr(source, 0)
+  f, i = expr.compiled_expr(source, 0)
 
   if i is None: raise Exception(
     f'blendscript.compile(): failed to parse {source}')

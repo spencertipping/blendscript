@@ -24,6 +24,7 @@ from ...generators.mesh import frontier
 from ..combinators      import *
 from ..expr             import *
 
+
 def frontier_add(fns, name):
   f = frontier(init_tag="o")
   for fn in fns:
@@ -34,7 +35,7 @@ defexprglobals(frontier=frontier, frontier_add=frontier_add)
 
 defexprop(**{
   'F:': pmap(lambda ps: f'frontier_add({ps[1]}, "{ps[0]}")',
-             seq(maybe(p_lword), expr))})
+            seq(maybe(p_lword), expr))})
 
 edge_face_spec = alt(
   const(['edges=False,faces=False'], re(r'j')),
@@ -50,13 +51,13 @@ def tag_spec(kwarg_name):
 
 defexprop(**{
   'F*': pmap(
-    lambda xs: f'FN(lambda _f: _f.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
+    lambda xs: f'_fn(lambda _f: _f.expand({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'F':  pmap(
-    lambda xs: f'FN(lambda _f: _f.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
+    lambda xs: f'_fn(lambda _f: _f.extrude({xs[2]}, {",".join([*(xs[0] + xs[1])])}))',
     seq(edge_face_spec, tag_spec("tag_as"), expr)),
 
   'F/': pmap(
-    lambda xs: f'FN(lambda _f: _f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])}))',
+    lambda xs: f'_fn(lambda _f: _f.collapse(dv={xs[2]}, {",".join(xs[0] + xs[1])}))',
     seq(edge_face_spec, tag_spec("target"), expr))})

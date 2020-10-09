@@ -21,9 +21,10 @@ defexprglobals().
 
 expr_ops      = dsp()
 expr_literals = alt()
+expr_var      = p_lword
 
 expr = pmap(lambda xs: xs[1], seq(maybe(p_ignore),
-                                  alt(expr_ops, expr_literals),
+                                  alt(expr_ops, expr_literals, expr_var),
                                   maybe(p_ignore)))
 """
 A recursive grammar element that evaluates to any expression, possibly
@@ -63,6 +64,8 @@ defexprliteral(
   pmap(lambda n:  f'({n})', p_int),
   pmap(lambda ps: f'[{",".join(ps[1])}]', seq(re(r'\['), rep(expr), re(r'\]'))),
 
+  pmap(lambda ps: f'"{ps[1]}"', seq(re(r"'"), p_word)),
+
   # Parens have no effect, they just help legibility
   pmap(lambda ps: ps[1], seq(re(r'\('), expr, re(r'\)'))),
 
@@ -74,46 +77,48 @@ defexprliteral(
 
   # Underscore always parses as a single identifier, even when immediately
   # followed by ident characters.
-  pmap(lambda b: b.decode(), re(r'_')),
-
-  # Last resort: assume it's a variable. In practice this case will probably
-  # get used frequently.
-  p_lword)
+  pmap(lambda b: b.decode(), re(r'_')))
 
 
-defexprglobals(FN=fn)
+defexprglobals(_fn=fn)
 
 def unop(f):
   return pmap(lambda x: f(x)
               if x is not None
-              else f'FN(lambda _x: {f("_x")})',
+              else f'_fn(lambda _x: {f("_x")})',
               maybe(expr))
 
 def binop(f):
   return pmap(lambda xs: f(*xs)
               if xs[1] is not None
-              else f'FN(lambda _x: {f(xs[0], "_x")})',
+              else f'_fn(lambda _x: {f(xs[0], "_x")})',
               seq(expr, maybe(expr)))
 
 def ternop(f):
   return pmap(lambda xs: f(*xs)
               if xs[2] is not None
-              else f'FN(lambda _x: {f(xs[0], xs[1], "_x")})',
+              else f'_fn(lambda _x: {f(xs[0], xs[1], "_x")})',
               seq(expr, expr, maybe(expr)))
 
 
-defexprglobals(Vector=Vector, reduce=reduce, chain=chain)
+def keyify(x): return x if type(x) == str else int(x)
+
+
+defexprglobals(
+  _Vector=Vector,
+  _keyify=keyify,
+  _chain=chain)
 
 defexprop(**{
-  'x':   unop(lambda x:       f'Vector(({x},0,0))'),
-  'y':   unop(lambda y:       f'Vector((0,{y},0))'),
-  'z':   unop(lambda z:       f'Vector((0,0,{z}))'),
-  'xy': binop(lambda x, y:    f'Vector(({x},{y},0))'),
-  'xz': binop(lambda x, z:    f'Vector(({x},0,{z}))'),
-  'yz': binop(lambda y, z:    f'Vector((0,{y},{z}))'),
-  'v': ternop(lambda x, y, z: f'Vector(({x},{y},{z}))'),
+  'x':   unop(lambda x:       f'_Vector(({x},0,0))'),
+  'y':   unop(lambda y:       f'_Vector((0,{y},0))'),
+  'z':   unop(lambda z:       f'_Vector((0,0,{z}))'),
+  'Z':  binop(lambda x, y:    f'_Vector(({x},{y},0))'),
+  'Y':  binop(lambda x, z:    f'_Vector(({x},0,{z}))'),
+  'X':  binop(lambda y, z:    f'_Vector((0,{y},{z}))'),
+  'V': ternop(lambda x, y, z: f'_Vector(({x},{y},{z}))'),
 
-  'i': unop(lambda n: f'range(int({n}))'),
+  'I': unop(lambda n: f'range(int({n}))'),
   'L': unop(lambda x: f'list({x})'),
 
   '>':  binop(lambda x, y: f'({y} > {x})'),
@@ -127,7 +132,7 @@ defexprop(**{
 
   '?':  ternop(lambda x, y, z: f'({y} if {x} else {z})'),
 
-  '\\': pmap(lambda ps: f'FN(lambda {ps[0] or "_"}: {ps[1]})',
+  '\\': pmap(lambda ps: f'_fn(lambda {ps[0] or "_"}: {ps[1]})',
              seq(maybe(p_lword), expr)),
   '::': pmap(lambda ps: f'(lambda {ps[0]}: {ps[2]})({ps[1]})',
              seq(p_lword, expr, expr)),
@@ -141,12 +146,12 @@ defexprop(**{
 
   '/#': unop(lambda x: f'len({x})'),
 
-  '`': binop(lambda i, xs: f'({xs}[int({i})])'),
+  '`': binop(lambda i, xs: f'({xs}[_keyify({i})])'),
   '`[': pmap(lambda ps: f'({",".join(ps[0])},)[-1]',
              seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),
-  '++': unop( lambda x:    f'list(chain(*({x})))'),
+  '++': unop( lambda x:    f'list(_chain(*({x})))'),
 
   '+': binop(lambda x, y: f'({x} + {y})'),
   '-': unop( lambda x:    f'(- {x})'),
