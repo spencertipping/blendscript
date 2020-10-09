@@ -20,9 +20,9 @@ Each has the following options:
 
 import bpy
 
-from ..generators.mesh import frontier
-from .combinators      import *
-from .expr             import *
+from ...generators.mesh import frontier
+from ..combinators      import *
+from ..expr             import *
 
 def frontier_add(fns, name):
   f = frontier(init_tag="o")

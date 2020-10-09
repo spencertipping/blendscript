@@ -28,6 +28,8 @@ from .expr        import *
 
 unsupported_bpy_datas = []
 
+# FIXME: we should have individual functions to dereference Blender objects and
+# throw errors (not fail the parse) if said objects don't exist
 def bpy_data_parser(name):
   try:
     return eval(f'p_member_of(bpy.data.{name}, p_word)', globals())
