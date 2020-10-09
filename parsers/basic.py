@@ -5,7 +5,10 @@ Basic building blocks for grammars.
 from .combinators import *
 
 p_word  = pmap(lambda s: s.decode(), re(r'[A-Za-z][A-Za-z0-9_\.]*'))
+"""A word that may begin with an upper or lowercase letter."""
+
 p_lword = pmap(lambda s: s.decode(), re(r'[a-z][A-Za-z0-9_\.]*'))
+"""A word that must begin with a lowercase letter."""
 
 p_int   = pmap(int,   re(r'-?\d+'))
 p_float = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',

@@ -86,19 +86,19 @@ defexprglobals(FN=fn)
 def unop(f):
   return pmap(lambda x: f(x)
               if x is not None
-              else f'FN(lambda _: {f("_")})',
+              else f'FN(lambda _x: {f("_x")})',
               maybe(expr))
 
 def binop(f):
   return pmap(lambda xs: f(*xs)
               if xs[1] is not None
-              else f'FN(lambda _: {f(xs[0], "_")})',
+              else f'FN(lambda _x: {f(xs[0], "_x")})',
               seq(expr, maybe(expr)))
 
 def ternop(f):
   return pmap(lambda xs: f(*xs)
               if xs[2] is not None
-              else f'FN(lambda _: {f(xs[0], xs[1], "_")})',
+              else f'FN(lambda _x: {f(xs[0], xs[1], "_x")})',
               seq(expr, expr, maybe(expr)))
 
 

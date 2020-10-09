@@ -1,3 +1,0 @@
-parse_commands = {
-  'c': {}
-}
