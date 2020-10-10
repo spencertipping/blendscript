@@ -70,7 +70,7 @@ defexprliteral(
   pmap(lambda ps: ps[1], seq(re(r'\('), expr, re(r'\)'))),
 
   # Python expressions within {}
-  pmap(lambda ms: f'({ms[0].decode()})', re(r'\{([^\}]+)\}')),
+  pmap(lambda m: f'({m.decode()})', re(r'\{([^\}]+)\}')),
 
   # A currying marker: +3; is the same as (+3) but one byte shorter
   const(None, re(r';')),

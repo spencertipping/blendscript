@@ -54,8 +54,10 @@ def re(*rs):
   def f(s, i):
     m = r.match(memoryview(s)[i:])
     if m is None: return fail(None)
-    if len(m.groups()) < 2: return ok(m.group(0), i + m.end())
-    else:                   return ok(m.groups(), i + m.end())
+    gs = len(m.groups())
+    if gs < 2: return ok(m.group(gs), i + m.end())
+    else:      return ok(m.groups(),  i + m.end())
+
   return parserify(f)
 
 def const(k, p):
