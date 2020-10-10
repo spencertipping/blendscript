@@ -36,3 +36,27 @@ Side effects are objects that modify something when applied to it.
 Side-effecting objects -- i.e. functions that transform stateful values -- are
 constructed using syntax that closely corresponds to Blender's keyboard
 shortcuts.
+
+
+## Mesh operations
+Let's golf a few basic mesh construction scenarios.
+
++ Creating things
+  + Cube from vertex: 14 `ex2\n aey2\n aez2\n`
+  + Cylinder from circle: 5 `fez2\n`
+  + 2x4" from cube: 18 `sx.75\n sy1.75\n sz48\n`
+
+
+## Vertex, edge, and face selection
+We'll want various query structures that let us emulate what you can do with the
+mouse, but using commands instead. We can use things like extrusion/selection
+history, select-by-bounds, select by distance, etc.
+
+**Q:** does `bmesh` export a proportional-editor API?
+
+
+## Fast mesh regen
+We can hash the operation stream used to generate each mesh. Then the mesh
+function can check for the existence of the desired object and skip if it's
+already there. This will require us to implement some type of hashing for lists,
+which I don't think will be a problem.
