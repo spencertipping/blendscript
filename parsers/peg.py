@@ -1,8 +1,5 @@
 """
-Parser combinators.
-
-Combinators are pretty simple: they take a string and an offset, and produce
-either a success tuple of (result, offset'), or a failure value of None.
+Parsing expression grammars.
 """
 
 import re as regex
@@ -18,8 +15,7 @@ def parser(f):
   """
   Returns f after verifying that it is a parser. This is just for type safety.
   """
-  if not f.is_parser:
-    raise str(f) + ' is not a parser'
+  if not f.is_parser: raise Exception(str(f) + ' is not a parser')
   return f
 
 def fail(e):  return (e, None)
