@@ -2,6 +2,11 @@
 Parsing expression grammars.
 """
 
+# TODO
+# Redo this to track failures and build a backtrace. This involves turning each
+# parser into a class.
+
+
 import re as regex
 
 def parserify(f):
