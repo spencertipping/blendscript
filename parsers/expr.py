@@ -5,12 +5,14 @@ BlendScript implements a Polish-notation calculator you can use to build vector
 and matrix expressions. The result is compiled into a Python function.
 """
 
+# TODO: move Vector references elsewhere
+
 from mathutils import Vector
 from itertools import chain
 
-from .combinators import *
-from .basic       import *
-from .function    import *
+from .peg      import *
+from .basic    import *
+from .function import *
 
 
 expr_globals = {}
@@ -23,13 +25,18 @@ expr_ops      = dsp()
 expr_literals = alt()
 expr_var      = p_lword
 
-expr = pmap(lambda xs: xs[1], seq(maybe(p_ignore),
-                                  alt(expr_ops, expr_literals, expr_var),
-                                  maybe(p_ignore)))
-"""
-A recursive grammar element that evaluates to any expression, possibly
-surrounded by whitespace and comments.
-"""
+def expr(layer):
+  """
+  An expression, possibly customized by a parser that takes precedence over the
+  usual set of expression literals and operations.
+  """
+
+  # TODO: pass layer downwards into expr_ops and expr_literals
+  return pmap(lambda xs: xs[1], seq(
+    maybe(p_ignore),
+    alt(layer, expr_ops, expr_literals, expr_var),
+    maybe(p_ignore)))
+
 
 compiled_expr = pmap(
   lambda body: eval(f'lambda: {body}', expr_globals),
