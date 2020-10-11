@@ -20,13 +20,19 @@ def parser(f):
   """
   Returns f after verifying that it is a parser. This is just for type safety.
   """
-  if not f.is_parser: raise Exception(str(f) + ' is not a parser')
+  if not f.is_parser: raise Exception(f'{f} is not a parser')
   return f
 
 def fail(e):  return (e, None)
 def ok(v, i): return (v, i)
 
 def none():
+  """
+  Fails the parse.
+  """
+  return parserify(lambda source, index: fail(None))
+
+def empty():
   """
   Parses no input successfully, returning None.
   """

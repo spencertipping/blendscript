@@ -1,13 +1,8 @@
 """
-Vector/matrix/numeric expressions.
-
 BlendScript implements a Polish-notation calculator you can use to build vector
 and matrix expressions. The result is compiled into a Python function.
 """
 
-# TODO: move Vector references elsewhere
-
-from mathutils import Vector
 from itertools import chain
 
 from .peg      import *
@@ -24,23 +19,12 @@ defexprglobals().
 expr_ops      = dsp()
 expr_literals = alt()
 expr_var      = p_lword
+expr          = pmap(lambda xs: xs[1],
+                     seq(maybe(p_ignore),
+                         alt(expr_ops, expr_literals, expr_var),
+                         maybe(p_ignore)))
 
-def expr(layer):
-  """
-  An expression, possibly customized by a parser that takes precedence over the
-  usual set of expression literals and operations.
-  """
-
-  # TODO: pass layer downwards into expr_ops and expr_literals
-  return pmap(lambda xs: xs[1], seq(
-    maybe(p_ignore),
-    alt(layer, expr_ops, expr_literals, expr_var),
-    maybe(p_ignore)))
-
-
-compiled_expr = pmap(
-  lambda body: eval(f'lambda: {body}', expr_globals),
-  expr)
+compiled_expr = pmap(lambda body: eval(f'lambda: {body}', expr_globals), expr)
 
 
 def defexprop(**ps):
@@ -62,14 +46,17 @@ def defexprglobals(**gs):
   """
   for g, v in gs.items():
     if g in expr_globals and expr_globals[g] != v:
-      raise Exception(f'defexprglobals: {g} is already defined as a different value')
+      raise Exception(
+        f'defexprglobals: {g} is already defined as a different value')
     expr_globals[g] = v
 
 
+def pylist(xs):  return f'[{",".join(xs)}]'
+def pytuple(xs): return f'({",".join(xs)},)'
+
 defexprliteral(
-  pmap(lambda n:  f'({n})', p_float),
-  pmap(lambda n:  f'({n})', p_int),
-  pmap(lambda ps: f'[{",".join(ps[1])}]', seq(re(r'\['), rep(expr), re(r'\]'))),
+  pmap(lambda n:  f'({n})', p_number),
+  pmap(lambda ps: pylist(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
 
   pmap(lambda ps: f'"{ps[1]}"', seq(re(r"'"), p_word)),
 
@@ -107,35 +94,28 @@ def ternop(f):
               else f'_fn(lambda _x: {f(xs[0], xs[1], "_x")})',
               seq(expr, expr, maybe(expr)))
 
-
 def keyify(x): return x if type(x) == str else int(x)
 
 
-defexprglobals(
-  _Vector=Vector,
-  _keyify=keyify,
-  _chain=chain)
+defexprglobals(_keyify=keyify,
+               _chain=chain,
+               _list=list,
+               _len=len,
+               _int=int,
+               _range=range)
 
 defexprop(**{
-  'x':   unop(lambda x:       f'_Vector(({x},0,0))'),
-  'y':   unop(lambda y:       f'_Vector((0,{y},0))'),
-  'z':   unop(lambda z:       f'_Vector((0,0,{z}))'),
-  'Z':  binop(lambda x, y:    f'_Vector(({x},{y},0))'),
-  'Y':  binop(lambda x, z:    f'_Vector(({x},0,{z}))'),
-  'X':  binop(lambda y, z:    f'_Vector((0,{y},{z}))'),
-  'V': ternop(lambda x, y, z: f'_Vector(({x},{y},{z}))'),
-
-  'I': unop(lambda n: f'range(int({n}))'),
-  'L': unop(lambda x: f'list({x})'),
+  'I': unop(lambda n: f'_range(_int({n}))'),
+  'L': unop(lambda x: f'_list({x})'),
 
   '>':  binop(lambda x, y: f'({y} > {x})'),
   '>=': binop(lambda x, y: f'({y} >= {x})'),
   '<':  binop(lambda x, y: f'({y} < {x})'),
   '<=': binop(lambda x, y: f'({y} <= {x})'),
   '==': binop(lambda x, y: f'({y} == {x})'),
-  '!':  unop( lambda x:    f'(not {x})'),
   '&':  binop(lambda x, y: f'({y} and {x})'),
   '|':  binop(lambda x, y: f'({y} or {x})'),
+  '!':   unop(lambda x:    f'(not {x})'),
 
   '?':  ternop(lambda x, y, z: f'({y} if {x} else {z})'),
 
@@ -151,17 +131,17 @@ defexprop(**{
   '.@': pmap(lambda ps: f'{ps[2]}.{ps[0]}(*{ps[1]})',
              seq(p_word, expr, expr)),
 
-  '/#': unop(lambda x: f'len({x})'),
+  '/#': unop(lambda x: f'_len({x})'),
 
   '`': binop(lambda i, xs: f'({xs}[_keyify({i})])'),
-  '`[': pmap(lambda ps: f'({",".join(ps[0])},)[-1]',
+  '`[': pmap(lambda ps: f'{pytuple(ps[0])}[-1]',
              seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),
-  '++': unop( lambda x:    f'list(_chain(*({x})))'),
+  '++':  unop(lambda x:    f'_list(_chain(*({x})))'),
 
   '+': binop(lambda x, y: f'({x} + {y})'),
-  '-': unop( lambda x:    f'(- {x})'),
+  '-':  unop(lambda x:    f'(- {x})'),
   '*': binop(lambda x, y: f'({x} * {y})'),
   '/': binop(lambda x, y: f'({y} / {x})'),
   '%': binop(lambda x, y: f'({y} % {x})'),

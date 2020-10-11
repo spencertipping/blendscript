@@ -2,24 +2,33 @@
 Matrix and quaternion transformation expressions.
 """
 
-from mathutils import Matrix, Quaternion
+from mathutils import Vector, Matrix, Quaternion
 from math      import pi
 
-from .combinators import *
-from .basic       import *
-from .expr        import *
+from .basic import *
+from .expr  import *
+from .peg   import *
 
 
 defexprglobals(tau = pi * 2,
-              _Matrix=Matrix,
-              _Quaternion=Quaternion)
+               _Vector = Vector,
+               _Matrix=Matrix,
+               _Quaternion=Quaternion)
 
 defexprop(**{
+  'x':   unop(lambda x:       f'_Vector(({x},0,0))'),
+  'y':   unop(lambda y:       f'_Vector((0,{y},0))'),
+  'z':   unop(lambda z:       f'_Vector((0,0,{z}))'),
+  'Z':  binop(lambda x, y:    f'_Vector(({x},{y},0))'),
+  'Y':  binop(lambda x, z:    f'_Vector(({x},0,{z}))'),
+  'X':  binop(lambda y, z:    f'_Vector((0,{y},{z}))'),
+  'V': ternop(lambda x, y, z: f'_Vector(({x},{y},{z}))'),
+
+  'Q':  lambda expr: pmap(lambda ps: f'_Quaternion(({",".join(ps)}))',
+                          rep(expr, min=4, max=4)),
+
   '~':  unop(lambda x: f'{x}.normalized()'),
   '^':  unop(lambda m: f'{m}.inverted()'),
-
-  'Q':  pmap(lambda ps: f'_Quaternion(({",".join(ps)}))',
-            rep(expr, min=4, max=4)),
 
   'T':  unop(lambda v: f'_Matrix.Translation({v})'),
 
