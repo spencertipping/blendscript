@@ -1,5 +1,6 @@
 # TODO
 + [x] Multiple expression-parsing contexts for operator-specific shorthands
++ [ ] `bmesh` geometry selection
 + [ ] `bmesh` operators for extrusion/spin/transforms
 + [ ] Hash tracking
 + [ ] Selection management and tracking for (2)
