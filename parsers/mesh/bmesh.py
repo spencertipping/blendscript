@@ -102,6 +102,13 @@ class bmesh_and_selection:
     if r is not None: self.subsets[r] = xs
     return self
 
+  def bind(self, q, r):
+    """
+    Evaluates a query now and stores the result under a new name.
+    """
+    self.store(r, self.select(q))
+    return self
+
   def context_fill(self, q=None, r=None):
     ret = bmesh.ops.contextual_create(self.bmesh, geom=self.select(q))
     self.store(r, ret['edges'] + ret['faces'])
@@ -138,11 +145,11 @@ class bmesh_and_selection:
     return self
 
   def spin(self, q, r, angle, steps=45,
-           cent=Vector((0, 0, 0)),
+           center=Vector((0, 0, 0)),
            axis=Vector((0, 0, 1)),
            delta=Vector((0, 0, 0))):
     ret = bmesh.ops.spin(self.bmesh, geom=self.select(q),
-                         cent=cent, axis=axis, dvec=delta,
-                         angle=angle, steps=steps)
+                         cent=center, axis=axis, dvec=delta,
+                         angle=angle, steps=steps, use_merge=True)
     self.store(r, ret['geom_last'])
     return self
