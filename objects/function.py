@@ -1,5 +1,10 @@
+"""
+Function objects and utilities for BlendScript runtime values.
+"""
+
 from functools import reduce
 
+def method(m): return fn(lambda x, *ys: getattr(x, m)(*ys))
 
 class fn:
   """

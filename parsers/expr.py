@@ -9,6 +9,8 @@ from .peg      import *
 from .basic    import *
 from .function import *
 
+from ..objects.function import method
+
 
 expr_globals = {}
 """
@@ -53,16 +55,16 @@ def defexprglobals(**gs):
 
 # NOTE: we don't parse anything into lists because lists are mutable and thus
 # not hashable. Instead, we rely exclusively on tuples.
-def pytuple(xs): return f'({",".join(xs)},)'
+def qtuple(xs): return f'({",".join(xs)},)'
 
 defexprliteral(
   pmap(lambda n:  f'({n})', p_number),
-  pmap(lambda ps: pytuple(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
+  pmap(lambda ps: qtuple(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
 
-  pmap(lambda ps: f'"{ps[1]}"', seq(re(r"'"), p_word)),
+  pmap(quoted(iseq(1, re(r"'"), p_word))),
 
   # Parens have no effect, they just help legibility
-  pmap(lambda ps: ps[1], seq(re(r'\('), expr, re(r'\)'))),
+  iseq(1, re(r'\('), expr, re(r'\)')),
 
   # Python expressions within {}
   pmap(lambda m: f'({m.decode()})', re(r'\{([^\}]+)\}')),
@@ -72,10 +74,12 @@ defexprliteral(
 
   # Underscore always parses as a single identifier, even when immediately
   # followed by ident characters.
-  pmap(lambda b: b.decode(), re(r'_')))
+  pmap(method('decode'), re(r'_')))
 
 
 defexprglobals(_fn=fn)
+
+def quoted(p): return pmap(lambda s: f'"{s}"', p)
 
 def unop(f):
   return pmap(lambda x: f(x)
@@ -135,7 +139,7 @@ defexprop(**{
   '/#': unop(lambda x: f'_len({x})'),
 
   '`': binop(lambda i, xs: f'({xs}[_keyify({i})])'),
-  '`[': pmap(lambda ps: f'{pytuple(ps[0])}[-1]',
+  '`[': pmap(lambda ps: f'{qtuple(ps[0])}[-1]',
              seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),

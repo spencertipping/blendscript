@@ -9,13 +9,13 @@ import bpy
 
 from itertools import reduce
 
+from ..objects.function import method
+
 
 def faces(xs): return (f for f in xs if isinstance(f, bmesh.types.BMFace))
 def edges(xs): return (e for e in xs if isinstance(e, bmesh.types.BMEdge))
 def verts(xs): return (v for v in xs if isinstance(v, bmesh.types.BMVert))
 def loops(xs): return (l for l in xs if isinstance(l, bmesh.types.BMLoop))
-
-def method(m): return lambda x, *ys: getattr(x, m)(*ys)
 
 
 class bmesh_and_selection:

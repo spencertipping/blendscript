@@ -19,10 +19,10 @@ which we can refer to specific collections.
 import bmesh
 import bpy
 
-from ..peg               import *
-from ..basic             import *
-from ..expr              import *
-from ...generators.bmesh import bmesh_and_selection, method
+from .peg               import *
+from .basic             import *
+from .expr              import *
+from ..generators.bmesh import bmesh_and_selection, method
 
 
 bmesh_ops  = dsp()
@@ -30,7 +30,7 @@ bmesh_expr = alt(bmesh_ops, expr)
 
 def defbmeshop(**ps): bmesh_ops.add(**ps)
 defexprop(**{
-  'M[': pmaps(lambda ps: pytuple(ps[0]), seq(rep(bmesh_expr), re(r'\]')))})
+  'M[': pmaps(lambda ps: qtuple(ps[0]), seq(rep(bmesh_expr), re(r'\]')))})
 
 
 """
@@ -42,9 +42,6 @@ generate.
 Note that this query grammar, like all BlendScript expressions, produces Python
 code that evaluates to the desired query object.
 """
-
-def quoted(p): return pmap(lambda s: f'"{s}"', p)
-
 bmesh_query = alt()
 bmesh_query.add(
   const('None', re(r':')),              # select all
@@ -52,8 +49,8 @@ bmesh_query.add(
   const('-1', re(r'_')),                # shorthand for most-recent output
   quoted(p_lword),                      # select by tag (named variable)
 
-  pmap(pytuple, seq(quoted(pmap(method('lower'), re(r'[FEV]'))), bmesh_query)),
-  pmap(pytuple, seq(quoted(re(r'[-\+\*]')), bmesh_query, bmesh_query)),
-  pmap(pytuple, seq(pmap(method('lower'), re(r'B')), expr, expr)))
+  pmap(qtuple, seq(quoted(pmap(method('lower'), re(r'[FEV]'))), bmesh_query)),
+  pmap(qtuple, seq(quoted(re(r'[-\+\*]')), bmesh_query, bmesh_query)),
+  pmap(qtuple, seq(pmap(method('lower'), re(r'B')), expr, expr)))
 
 bmesh_result = maybe(iseq(1, re(r'>'), p_lword))
