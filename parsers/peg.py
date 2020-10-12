@@ -202,3 +202,20 @@ def pif(f, p):
     (v, i2) = p(s, i)
     return (v, i2) if i2 is not None and f(v) else (None, None)
   return parserify(g)
+
+def pmaps(f, p):
+  """
+  Just like pmap, but assumes the parser returns a list and splays the
+  arguments into the function.
+  """
+  return pmap(lambda xs: f(*xs), p)
+
+def iseq(ix, *ps):
+  """
+  A variant of seq() that selects a specific subset of parse results. ix can be
+  either a sequence or an integer; if ix is an integer, then just that
+  subparser's result will be returned.
+  """
+  return pmap(
+    lambda xs: xs[ix] if isinstance(ix, int) else [xs[i] for i in ix],
+    seq(*ps))

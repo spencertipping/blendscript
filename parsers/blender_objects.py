@@ -9,7 +9,7 @@ from .basic       import *
 from .expr        import *
 
 
-'''
+"""
 Some design notes.
 
 Blender uses a few different object hierarchies. One is the scene graph,
@@ -23,8 +23,7 @@ of collections. Object/object parenting is different.
 
 We should create a custom property on all BlendScript objects and auto-nuke
 them when we set up the scene context. That way BlendScript is declarative.
-'''
-
+"""
 
 def clear_blendscript():
   for p in dir(bpy.data):

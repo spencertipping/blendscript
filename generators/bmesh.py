@@ -10,10 +10,10 @@ import bpy
 from itertools import reduce
 
 
-def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
-def edges(xs): return [e for e in xs if isinstance(e, bmesh.types.BMEdge)]
-def verts(xs): return [v for v in xs if isinstance(v, bmesh.types.BMVert)]
-def loops(xs): return [l for l in xs if isinstance(l, bmesh.types.BMLoop)]
+def faces(xs): return (f for f in xs if isinstance(f, bmesh.types.BMFace))
+def edges(xs): return (e for e in xs if isinstance(e, bmesh.types.BMEdge))
+def verts(xs): return (v for v in xs if isinstance(v, bmesh.types.BMVert))
+def loops(xs): return (l for l in xs if isinstance(l, bmesh.types.BMLoop))
 
 def method(m): return lambda x, *ys: getattr(x, m)(*ys)
 
@@ -55,16 +55,16 @@ class bmesh_and_selection:
     if q is None:            return vs[:] + es[:] + fs[:]
     elif isinstance(q, str): return self.subsets[q]
     elif isinstance(q, int): return self.history[q]
-    elif isinstance(q, list):
+    elif isinstance(q, tuple):
       c = q[0]
       if c == '*':
         return reduce(method('intersection'),
-                      [set(self.select(s)) for s in q[1:]])
+                      (set(self.select(s)) for s in q[1:]))
       elif c == '+':
         return reduce(method('union'),
-                      [set(self.select(s)) for s in q[1:]])
+                      (set(self.select(s)) for s in q[1:]))
       elif c == '-':
-        q1, q2 = [set(self.select(s)) for s in q[1:]]
+        q1, q2 = (set(self.select(s)) for s in q[1:])
         return q1.difference(q2)
       elif c == 'b':
         l, u = q[1].co, q[2].co

@@ -51,12 +51,13 @@ def defexprglobals(**gs):
     expr_globals[g] = v
 
 
-def pylist(xs):  return f'[{",".join(xs)}]'
+# NOTE: we don't parse anything into lists because lists are mutable and thus
+# not hashable. Instead, we rely exclusively on tuples.
 def pytuple(xs): return f'({",".join(xs)},)'
 
 defexprliteral(
   pmap(lambda n:  f'({n})', p_number),
-  pmap(lambda ps: pylist(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
+  pmap(lambda ps: pytuple(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
 
   pmap(lambda ps: f'"{ps[1]}"', seq(re(r"'"), p_word)),
 
@@ -99,14 +100,14 @@ def keyify(x): return x if type(x) == str else int(x)
 
 defexprglobals(_keyify=keyify,
                _chain=chain,
-               _list=list,
+               _tuple=tuple,
                _len=len,
                _int=int,
                _range=range)
 
 defexprop(**{
   'I': unop(lambda n: f'_range(_int({n}))'),
-  'L': unop(lambda x: f'_list({x})'),
+  'L': unop(lambda x: f'_tuple({x})'),
 
   '>':  binop(lambda x, y: f'({y} > {x})'),
   '>=': binop(lambda x, y: f'({y} >= {x})'),
@@ -138,7 +139,7 @@ defexprop(**{
              seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),
-  '++':  unop(lambda x:    f'_list(_chain(*({x})))'),
+  '++':  unop(lambda x:    f'_tuple(_chain(*({x})))'),
 
   '+': binop(lambda x, y: f'({x} + {y})'),
   '-':  unop(lambda x:    f'(- {x})'),
