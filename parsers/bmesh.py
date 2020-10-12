@@ -54,3 +54,4 @@ bmesh_query.add(
   pmap(qtuple, seq(pmap(method('lower'), re(r'B')), expr, expr)))
 
 bmesh_result = maybe(iseq(1, re(r'>'), p_lword))
+bmesh_qr     = seq(bmesh_query, bmesh_result)
