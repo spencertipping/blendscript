@@ -30,12 +30,12 @@ def compile(source):
   """
   if type(source) == str: source = source.encode()
   f, i = expr.compiled_expr(source, 0)
-
   if i is None: raise Exception(
     f'blendscript.compile(): failed to parse {source}')
-
   if i != len(source): raise Exception(
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
+
+  print(f"compiled blendscript to function: {f}")
 
   return f
 
@@ -44,6 +44,13 @@ def run(source):
   Runs the given source directly. This is a shorthand for compile(source)().
   """
   return compile(source)()
+
+def live(source):
+  """
+  Runs the given source directly. In the future this will do some automatic
+  Blender object management to make it easier to work with generated objects.
+  """
+  return run(source)
 
 
 class BlendScriptOp(bpy.types.Operator):

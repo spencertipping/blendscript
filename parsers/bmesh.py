@@ -25,14 +25,13 @@ from .peg               import *
 from .basic             import *
 from .expr              import *
 from ..generators.bmesh import bmesh_and_selection, method
-from ..objects.val      import method_call_op, method_call
 
 
 bmesh_ops  = dsp()
-bmesh_expr = alt(bmesh_ops, expr)
+bmesh_expr = whitespaced(alt(bmesh_ops, expr))
 
 def defbmeshop(**ps): bmesh_ops.add(**ps)
-defexprop(**{'M[': pmaps(qtuple, iseq(0, rep(bmesh_expr), re(r'\]')))})
+defexprop(**{'M[': pmap(qtuple, iseq(0, rep(bmesh_expr), re(r'\]')))})
 
 def make_bmesh(name, ops):
   b = bmesh_and_selection(bmesh.new())
@@ -42,24 +41,26 @@ def make_bmesh(name, ops):
   return b.render(name)
 
 defexprglobals(_make_bmesh=make_bmesh)
+defexprop(
+  **{'M:': pmaps(lambda n, l: f'_make_bmesh("{n}", {l})', seq(p_lword, expr))})
 
 
 bmesh_query = alt()
 bmesh_query.add(
-  const('None', re(r':')),              # select all
+  const('None', lit(':')),              # select all
   pmap(str, p_int),                     # select by history
-  const('-1', re(r'_')),                # shorthand for most-recent output
+  const('-1', lit('_')),                # shorthand for most-recent output
   quoted(p_lword),                      # select by tag (named variable)
 
   pmap(qtuple, seq(quoted(pmap(method('lower'), re(r'[FEV]'))), bmesh_query)),
   pmap(qtuple, seq(quoted(re(r'[-\+\*]')), bmesh_query, bmesh_query)),
-  pmap(qtuple, seq(pmap(method('lower'), re(r'B')), expr, expr)))
+  pmap(qtuple, seq(pmap(method('lower'), lit('B')), expr, expr)))
 
-bmesh_result = pmap(quoted, iseq(1, re(r'>'), p_lword))
+bmesh_result = pmap(quoted, iseq(1, lit('>'), p_lword))
 
 bmesh_q  = kwarg('q', bmesh_query)
 bmesh_r  = kwarg('r', alt(bmesh_result, const('None', empty)))
-bmesh_qr = pmaps(qargs, seq(bmesh_q, bmesh_r))
+bmesh_qr = pmap(qargs, seq(bmesh_q, bmesh_r))
 
 
 defbmeshop(**{

@@ -26,17 +26,8 @@ def parser(f):
 def fail(e):  return (e, None)
 def ok(v, i): return (v, i)
 
-def none():
-  """
-  Fails the parse.
-  """
-  return parserify(lambda source, index: fail(None))
-
-def empty():
-  """
-  Parses no input successfully, returning None.
-  """
-  return parserify(lambda source, index: ok(None, index))
+none  = parserify(lambda source, index: fail(None))
+empty = parserify(lambda source, index: ok(None, index))
 
 def lit(k):
   """
@@ -44,7 +35,7 @@ def lit(k):
   """
   def f(s, i):
     sub = s[i:i+len(k)]
-    return (sub, i + len(k)) if sub == k else fail(None)
+    return (sub.decode(), i + len(k)) if sub == k else fail(None)
   return parserify(f)
 
 def re(*rs):

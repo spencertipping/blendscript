@@ -25,7 +25,9 @@ expr_literals = alt()
 expr_var      = p_lword
 expr          = whitespaced(alt(expr_ops, expr_literals, expr_var))
 
-compiled_expr = pmap(lambda body: eval(f'lambda: {body}', expr_globals), expr)
+compiled_expr = pmap(
+  lambda body: eval(f'_fn(lambda: {body}, source={repr(body)})', expr_globals),
+  expr)
 
 
 def defexprop(**ps):
@@ -34,9 +36,9 @@ def defexprop(**ps):
   aren't doing something awful, for a sufficiently narrow definition of awful.
   """
   for op, p in ps.items():
-    if op in expr_ops: raise Exception(
-        f'defexprop: tried to redefine existing operator {op}')
-
+    if op in expr_ops.ps: raise Exception(
+        f'defexprop: tried to redefine existing operator {op} '
+        f'(if you really want to do this, delete expr_ops["{op}"] first)')
   expr_ops.add(**ps)
 
 def defexprliteral(*ps):
@@ -60,19 +62,27 @@ def defexprglobals(**gs):
 
 
 # NOTE: we don't parse anything into lists because lists are mutable and thus
-# not hashable. Instead, we rely exclusively on tuples.
+# not hashable. Instead, we rely exclusively on tuples to represent sequence
+# data.
 def qtuple(xs): return f'({",".join(xs)},)'
 def qargs(xs):  return ','.join(filter(None, xs))
 
+defexprglobals(_fn=fn, _method_call_op=method_call_op)
+def qmethod_call(m):
+  return lambda *args: f'_method_call_op("{m}", {qargs(args)})'
+
+def quoted(p):   return pmap(repr, p)
+def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
+
 
 defexprliteral(
-  pmap(lambda n:  f'({n})', p_number),
-  pmap(lambda ps: qtuple(ps[1]), seq(re(r'\['), rep(expr), re(r'\]'))),
+  pmap(lambda n: f'({n})', p_number),
+  pmap(qtuple, iseq(1, re(r'\['), rep(expr), re(r'\]'))),
 
-  pmap(quoted(iseq(1, re(r"'"), p_word))),
+  quoted(iseq(1, re(r"'"), p_word)),
 
   # Parens have no effect, they just help legibility
-  iseq(1, re(r'\('), expr, re(r'\)')),
+  iseq(1, lit('('), expr, lit(')')),
 
   # Python expressions within {}
   pmap(lambda m: f'({m.decode()})', re(r'\{([^\}]+)\}')),
@@ -83,14 +93,6 @@ defexprliteral(
   # Underscore always parses as a single identifier, even when immediately
   # followed by ident characters.
   pmap(method('decode'), re(r'_')))
-
-
-defexprglobals(_fn=fn, _method_call_op=method_call_op)
-def qmethod_call(m):
-  return lambda *args: f'_method_call_op("{m}", {qargs(args)})'
-
-def quoted(p):   return pmap(lambda s: f'"{s}"', p)
-def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
 
 
 # TODO: convert the partial applications to section() objects once we have them

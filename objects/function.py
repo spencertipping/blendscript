@@ -21,8 +21,9 @@ class fn:
   (f + g)(x) == f(x) + g(x)
   (-f)(x)    == -f(x)
   """
-  def __init__(self, f):
+  def __init__(self, f, source=None):
     self.f = f.f if type(f) == type(self) else f
+    self.source = source
 
   def __call__(self, *xs, **d): return self.f(*xs, **d)
 
@@ -34,3 +35,5 @@ class fn:
   def __mod__(self, xs): return filter(self.f, xs)
 
   def __matmul__(self, g): return compose(self.f, g)
+
+  def __str__(self): return self.source

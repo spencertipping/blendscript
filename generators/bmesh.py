@@ -7,7 +7,8 @@ This is just a bmesh object with a sidecar of named geometry selections.
 import bmesh
 import bpy
 
-from itertools import reduce
+from functools import reduce
+from mathutils import Vector
 
 from ..objects.function import method
 

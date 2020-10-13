@@ -4,9 +4,9 @@ Blender object references (by name)
 
 import bpy
 
-from .combinators import *
-from .basic       import *
-from .expr        import *
+from .peg   import *
+from .basic import *
+from .expr  import *
 
 
 """
@@ -36,14 +36,12 @@ def clear_blendscript():
 def blender_add_object(name, obj):
   if len(name) and name in bpy.data.objects:
     bpy.data.objects.remove(bpy.data.objects[name])
-
   linked_obj = bpy.data.objects.new(name, obj)
   linked_obj['added_by_blendscript'] = True
   bpy.context.scene.collection.objects.link(linked_obj)
   return linked_obj.name
 
 defexprglobals(_blender_add_object=blender_add_object)
-
 defexprop(**{
-  'B:': pmap(lambda ps: f'_blender_add_object("{ps[0] or ""}", {ps[1]})',
-            seq(maybe(p_lword), expr))})
+  'B:': pmaps(lambda n, o: f'_blender_add_object("{n or ""}", {o})',
+              seq(maybe(p_lword), expr))})

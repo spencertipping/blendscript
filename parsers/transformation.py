@@ -10,7 +10,7 @@ from .expr  import *
 from .peg   import *
 
 
-defexprglobals(tau = pi * 2,
+defexprglobals(_tau = pi * 2,
                _Vector = Vector,
                _Matrix=Matrix,
                _Quaternion=Quaternion)
@@ -24,18 +24,18 @@ defexprop(**{
   'X':  binop(lambda y, z:    f'_Vector((0,{y},{z}))'),
   'V': ternop(lambda x, y, z: f'_Vector(({x},{y},{z}))'),
 
-  'Q':  lambda expr: pmap(lambda ps: f'_Quaternion(({",".join(ps)}))',
-                          rep(expr, min=4, max=4)),
+  'Q':  pmap(lambda ps: f'_Quaternion(({",".join(ps)}))',
+             rep(expr, min=4, max=4)),
 
   '~':  unop(lambda x: f'{x}.normalized()'),
   '^':  unop(lambda m: f'{m}.inverted()'),
 
   'T':  unop(lambda v: f'_Matrix.Translation({v})'),
 
-  'Rx': unop(lambda x: f'_Matrix.Rotation(({x}) * tau, 4, "X")'),
-  'Ry': unop(lambda x: f'_Matrix.Rotation(({x}) * tau, 4, "Y")'),
-  'Rz': unop(lambda x: f'_Matrix.Rotation(({x}) * tau, 4, "Z")'),
-  'R': binop(lambda ps: f'_Matrix.Rotation(({ps[1]}) * tau, 4, {ps[0]})'),
+  'Rx': unop(lambda x: f'_Matrix.Rotation(({x}) * _tau, 4, "X")'),
+  'Ry': unop(lambda x: f'_Matrix.Rotation(({x}) * _tau, 4, "Y")'),
+  'Rz': unop(lambda x: f'_Matrix.Rotation(({x}) * _tau, 4, "Z")'),
+  'R': binop(lambda ps: f'_Matrix.Rotation(({ps[1]}) * _tau, 4, {ps[0]})'),
 
   'Sx': unop(lambda x: f'_Matrix.Scale({x}, 4, "X")'),
   'Sy': unop(lambda x: f'_Matrix.Scale({x}, 4, "Y")'),
