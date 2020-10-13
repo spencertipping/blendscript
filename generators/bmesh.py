@@ -33,7 +33,8 @@ class bmesh_and_selection:
     self.subsets = {}
     self.history = []
 
-  def select(self, q):
+  def select(self, q): return list(self.select_(q))
+  def select_(self, q):
     """
     Evaluates the selection query, returning the result. Options are:
 
@@ -59,21 +60,21 @@ class bmesh_and_selection:
       c = q[0]
       if c == '*':
         return reduce(method('intersection'),
-                      (set(self.select(s)) for s in q[1:]))
+                      (set(self.select_(s)) for s in q[1:]))
       elif c == '+':
         return reduce(method('union'),
-                      (set(self.select(s)) for s in q[1:]))
+                      (set(self.select_(s)) for s in q[1:]))
       elif c == '-':
-        q1, q2 = (set(self.select(s)) for s in q[1:])
+        q1, q2 = (set(self.select_(s)) for s in q[1:])
         return q1.difference(q2)
       elif c == 'b':
         l, u = q[1].co, q[2].co
         return [v for v in vs if l[0] <= v[0] <= u[0] and
                                  l[1] <= v[1] <= u[1] and
                                  l[2] <= v[2] <= u[2]]
-      elif c == 'f': return faces(self.select(q[1]))
-      elif c == 'e': return edges(self.select(q[1]))
-      elif c == 'v': return verts(self.select(q[1]))
+      elif c == 'f': return faces(self.select_(q[1]))
+      elif c == 'e': return edges(self.select_(q[1]))
+      elif c == 'v': return verts(self.select_(q[1]))
 
     raise Exception(f'unsupported bmesh query: {q}')
 

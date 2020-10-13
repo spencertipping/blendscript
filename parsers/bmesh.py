@@ -33,15 +33,6 @@ defexprop(**{
   'M[': pmaps(lambda ps: qtuple(ps[0]), seq(rep(bmesh_expr), re(r'\]')))})
 
 
-"""
-Query grammar.
-
-See docs on bmesh_and_selection.select() for the output values these parsers
-generate.
-
-Note that this query grammar, like all BlendScript expressions, produces Python
-code that evaluates to the desired query object.
-"""
 bmesh_query = alt()
 bmesh_query.add(
   const('None', re(r':')),              # select all
