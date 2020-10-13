@@ -20,6 +20,7 @@ import bmesh
 import bpy
 
 from mathutils import Vector
+from time import time
 
 from .peg               import *
 from .basic             import *
@@ -34,11 +35,15 @@ def defbmeshop(**ps): bmesh_ops.add(**ps)
 defexprop(**{'M[': pmap(qtuple, iseq(0, rep(bmesh_expr), whitespaced(lit(']'))))})
 
 def make_bmesh(name, ops):
+  t0 = time()
   b = bmesh_and_selection(bmesh.new())
   b.create_vert(r="_", v=Vector((0, 0, 0)))
   for o in ops:
     b = o(b)
-  return b.render(name)
+  m = b.render(name)
+  t1 = time()
+  if t1 - t0 > 0.1: print(f'{t1 - t0} second(s) to render mesh {name}')
+  return m
 
 defexprglobals(_make_bmesh=make_bmesh)
 defexprop(
