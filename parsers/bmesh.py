@@ -19,18 +19,29 @@ which we can refer to specific collections.
 import bmesh
 import bpy
 
+from mathutils import Vector
+
 from .peg               import *
 from .basic             import *
 from .expr              import *
 from ..generators.bmesh import bmesh_and_selection, method
+from ..objects.val      import method_call_op, method_call
 
 
 bmesh_ops  = dsp()
 bmesh_expr = alt(bmesh_ops, expr)
 
 def defbmeshop(**ps): bmesh_ops.add(**ps)
-defexprop(**{
-  'M[': pmaps(lambda ps: qtuple(ps[0]), seq(rep(bmesh_expr), re(r'\]')))})
+defexprop(**{'M[': pmaps(qtuple, iseq(0, rep(bmesh_expr), re(r'\]')))})
+
+def make_bmesh(name, ops):
+  b = bmesh_and_selection(bmesh.new())
+  b.create_vert(r="_", v=Vector((0, 0, 0)))
+  for o in ops:
+    b = o(b)
+  return b.render(name)
+
+defexprglobals(_make_bmesh=make_bmesh)
 
 
 bmesh_query = alt()
@@ -44,5 +55,26 @@ bmesh_query.add(
   pmap(qtuple, seq(quoted(re(r'[-\+\*]')), bmesh_query, bmesh_query)),
   pmap(qtuple, seq(pmap(method('lower'), re(r'B')), expr, expr)))
 
-bmesh_result = maybe(iseq(1, re(r'>'), p_lword))
-bmesh_qr     = seq(bmesh_query, bmesh_result)
+bmesh_result = pmap(quoted, iseq(1, re(r'>'), p_lword))
+
+bmesh_q  = kwarg('q', bmesh_query)
+bmesh_r  = kwarg('r', alt(bmesh_result, const('None', empty)))
+bmesh_qr = pmaps(qargs, seq(bmesh_q, bmesh_r))
+
+
+defbmeshop(**{
+  '=': pmap(qmethod_call('bind'), bmesh_qr),
+  'f': pmap(qmethod_call('context_fill'), bmesh_qr),
+  'b': pmap(qmethod_call('bridge_loops'), bmesh_qr),
+  't': pmaps(qmethod_call('transform'), seq(bmesh_q, kwarg('v', expr))),
+
+  'e': pmap(qmethod_call('extrude'), bmesh_qr),
+  'v': pmaps(qmethod_call('create_vert'), seq(bmesh_r, kwarg('m', expr))),
+  'd': pmap(qmethod_call('duplicate'), bmesh_qr),
+  's': pmaps(qmethod_call('spin'),
+             seq(bmesh_q, bmesh_r,
+                 kwarg('angle', expr),
+                 maybe(kwarg('steps',  iseq(1, lit('*'), expr))),
+                 maybe(kwarg('center', iseq(1, lit('@'), expr))),
+                 maybe(kwarg('axis',   iseq(1, lit('^'), expr))),
+                 maybe(kwarg('delta',  iseq(1, lit('+'), expr)))))})

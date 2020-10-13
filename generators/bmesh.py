@@ -27,6 +27,8 @@ class bmesh_and_selection:
   that return results allow you to store those results by specifying "r". In
   some cases the default is to replace the current selection with the result;
   for instance, extrusions. When that's true the default for "r" is "_".
+
+  Methods that accept "q" and "r" always position them before other arguments.
   """
   def __init__(self, bmesh):
     self.bmesh   = bmesh
@@ -102,6 +104,7 @@ class bmesh_and_selection:
     m = bpy.data.meshes.new(name)
     self.bmesh.to_mesh(m)
     self.bmesh.free()
+    self.bmesh = None
     return m
 
   def context_fill(self, q=None, r=None):
@@ -118,23 +121,33 @@ class bmesh_and_selection:
     bmesh.ops.transform(self.bmesh, matrix=m, verts=verts(self.select(q)))
     return self
 
-  def extrude_faces(self, q, r='_'):
-    ret = bmesh.ops.extrude_discrete_faces(
-      self.bmesh, faces=faces(self.select(q)))
-    self.store(r, ret['faces'])
+  def extrude(self, q, r='_'):
+    """
+    Multipurpose extrude. Delegates to individual bmesh methods to extrude
+    vertices, edges, and faces, to the extent that the query produces them, and
+    aggregates the results as though it had been a single operation. Note that
+    this can produce ambiguous results in certain cases.
+    """
+    q = self.select(q)
+    qf = faces(q)
+    qe = edges(q)
+    qv = verts(q)
+
+    rg = []
+    if len(qf):
+      rg += bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
+
+    if len(qe):
+      rg += bmesh.ops.extrude_edge_only(self.bemsh, edges=qe)['geom']
+
+    if len(qv):
+      rv = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=qv)
+      rg += rv['edges'] + rv['verts']
+
+    self.store(r, rg)
     return self
 
-  def extrude_edges(self, q, r='_'):
-    ret = bmesh.ops.extrude_edge_only(self.bmesh, edges=edges(self.select(q)))
-    self.store(r, ret['geom'])
-    return self
-
-  def extrude_verts(self, q, r='_'):
-    ret = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=verts(self.select(q)))
-    self.store(r, ret['edges'] + ret['verts'])
-    return self
-
-  def create_vert(self, v, r):
+  def create_vert(self, r, v):
     ret = bmesh.ops.create_vert(self.bmesh, co=v)
     self.store(r, ret['vert'])
     return self

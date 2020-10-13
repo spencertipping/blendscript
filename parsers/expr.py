@@ -5,12 +5,14 @@ and matrix expressions. The result is compiled into a Python function.
 
 from itertools import chain
 
-from .peg      import *
-from .basic    import *
-from .function import *
+from .peg               import *
+from .basic             import *
+from ..objects.function import *
+from ..objects.val      import *
 
-from ..objects.function import method
 
+def whitespaced(p):
+  return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
 
 expr_globals = {}
 """
@@ -21,18 +23,20 @@ defexprglobals().
 expr_ops      = dsp()
 expr_literals = alt()
 expr_var      = p_lword
-expr          = pmap(lambda xs: xs[1],
-                     seq(maybe(p_ignore),
-                         alt(expr_ops, expr_literals, expr_var),
-                         maybe(p_ignore)))
+expr          = whitespaced(alt(expr_ops, expr_literals, expr_var))
 
 compiled_expr = pmap(lambda body: eval(f'lambda: {body}', expr_globals), expr)
 
 
 def defexprop(**ps):
   """
-  Defines new operators, each with a constant string prefix.
+  Defines new operators, each with a constant string prefix. Verifies that you
+  aren't doing something awful, for a sufficiently narrow definition of awful.
   """
+  for op, p in ps.items():
+    if op in expr_ops: raise Exception(
+        f'defexprop: tried to redefine existing operator {op}')
+
   expr_ops.add(**ps)
 
 def defexprliteral(*ps):
@@ -44,18 +48,22 @@ def defexprliteral(*ps):
 
 def defexprglobals(**gs):
   """
-  Binds new globals within the compiled environment.
+  Binds new globals within the compiled environment, complaining if you try to
+  break stuff.
   """
   for g, v in gs.items():
-    if g in expr_globals and expr_globals[g] != v:
-      raise Exception(
-        f'defexprglobals: {g} is already defined as a different value')
+    if not g.startswith('_') or len(g) < 2: raise Exception(
+      f'defexprglobals: the name {g} can collide with user-bound variables')
+    if g in expr_globals and expr_globals[g] != v: raise Exception(
+      f'defexprglobals: {g} is already defined as a different value')
     expr_globals[g] = v
 
 
 # NOTE: we don't parse anything into lists because lists are mutable and thus
 # not hashable. Instead, we rely exclusively on tuples.
 def qtuple(xs): return f'({",".join(xs)},)'
+def qargs(xs):  return ','.join(filter(None, xs))
+
 
 defexprliteral(
   pmap(lambda n:  f'({n})', p_number),
@@ -77,10 +85,16 @@ defexprliteral(
   pmap(method('decode'), re(r'_')))
 
 
-defexprglobals(_fn=fn)
+defexprglobals(_fn=fn, _method_call_op=method_call_op)
+def qmethod_call(m):
+  return lambda *args: f'_method_call_op("{m}", {qargs(args)})'
 
-def quoted(p): return pmap(lambda s: f'"{s}"', p)
+def quoted(p):   return pmap(lambda s: f'"{s}"', p)
+def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
 
+
+# TODO: convert the partial applications to section() objects once we have them
+# (this will enable more specific coercion logic)
 def unop(f):
   return pmap(lambda x: f(x)
               if x is not None
@@ -99,8 +113,8 @@ def ternop(f):
               else f'_fn(lambda _x: {f(xs[0], xs[1], "_x")})',
               seq(expr, expr, maybe(expr)))
 
-def keyify(x): return x if type(x) == str else int(x)
 
+def keyify(x): return x if type(x) == str else int(x)
 
 defexprglobals(_keyify=keyify,
                _chain=chain,
