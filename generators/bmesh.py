@@ -13,10 +13,10 @@ from mathutils import Vector
 from ..objects.function import method
 
 
-def faces(xs): return (f for f in xs if isinstance(f, bmesh.types.BMFace))
-def edges(xs): return (e for e in xs if isinstance(e, bmesh.types.BMEdge))
-def verts(xs): return (v for v in xs if isinstance(v, bmesh.types.BMVert))
-def loops(xs): return (l for l in xs if isinstance(l, bmesh.types.BMLoop))
+def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
+def edges(xs): return [e for e in xs if isinstance(e, bmesh.types.BMEdge)]
+def verts(xs): return [v for v in xs if isinstance(v, bmesh.types.BMVert)]
+def loops(xs): return [l for l in xs if isinstance(l, bmesh.types.BMLoop)]
 
 
 class bmesh_and_selection:
@@ -106,6 +106,7 @@ class bmesh_and_selection:
     self.bmesh.to_mesh(m)
     self.bmesh.free()
     self.bmesh = None
+    m.update()
     return m
 
   def context_fill(self, q=None, r=None):
@@ -139,7 +140,7 @@ class bmesh_and_selection:
       rg += bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
 
     if len(qe):
-      rg += bmesh.ops.extrude_edge_only(self.bemsh, edges=qe)['geom']
+      rg += bmesh.ops.extrude_edge_only(self.bmesh, edges=qe)['geom']
 
     if len(qv):
       rv = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=qv)

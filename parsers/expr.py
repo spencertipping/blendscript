@@ -64,7 +64,7 @@ def defexprglobals(**gs):
 # NOTE: we don't parse anything into lists because lists are mutable and thus
 # not hashable. Instead, we rely exclusively on tuples to represent sequence
 # data.
-def qtuple(xs): return f'({",".join(xs)},)'
+def qtuple(xs): return f'({",".join(xs)},)' if len(xs) > 0 else '()'
 def qargs(xs):  return ','.join(filter(None, xs))
 
 defexprglobals(_fn=fn, _method_call_op=method_call_op)
@@ -77,7 +77,6 @@ def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
 
 defexprliteral(
   pmap(lambda n: f'({n})', p_number),
-  pmap(qtuple, iseq(1, re(r'\['), rep(expr), re(r'\]'))),
 
   quoted(iseq(1, re(r"'"), p_word)),
 
@@ -128,6 +127,8 @@ defexprglobals(_keyify=keyify,
 defexprop(**{
   'I': unop(lambda n: f'_range(_int({n}))'),
   'L': unop(lambda x: f'_tuple({x})'),
+
+  '[': pmap(qtuple, iseq(0, rep(expr), whitespaced(lit(']')))),
 
   '>':  binop(lambda x, y: f'({y} > {x})'),
   '>=': binop(lambda x, y: f'({y} >= {x})'),

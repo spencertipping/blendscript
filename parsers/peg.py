@@ -33,6 +33,7 @@ def lit(k):
   """
   Parses a literal string, returning it.
   """
+  if isinstance(k, str): k = k.encode()
   def f(s, i):
     sub = s[i:i+len(k)]
     return (sub.decode(), i + len(k)) if sub == k else fail(None)
@@ -53,8 +54,8 @@ def re(*rs):
     m = r.match(memoryview(s)[i:])
     if m is None: return fail(None)
     gs = len(m.groups())
-    if gs < 2: return ok(m.group(gs), i + m.end())
-    else:      return ok(m.groups(),  i + m.end())
+    if gs < 2: return ok(m.group(gs).decode(), i + m.end())
+    else:      return ok([x.decode() for x in m.groups()], i + m.end())
 
   return parserify(f)
 

@@ -31,7 +31,7 @@ bmesh_ops  = dsp()
 bmesh_expr = whitespaced(alt(bmesh_ops, expr))
 
 def defbmeshop(**ps): bmesh_ops.add(**ps)
-defexprop(**{'M[': pmap(qtuple, iseq(0, rep(bmesh_expr), re(r'\]')))})
+defexprop(**{'M[': pmap(qtuple, iseq(0, rep(bmesh_expr), whitespaced(lit(']'))))})
 
 def make_bmesh(name, ops):
   b = bmesh_and_selection(bmesh.new())
@@ -67,14 +67,14 @@ defbmeshop(**{
   '=': pmap(qmethod_call('bind'), bmesh_qr),
   'f': pmap(qmethod_call('context_fill'), bmesh_qr),
   'b': pmap(qmethod_call('bridge_loops'), bmesh_qr),
-  't': pmaps(qmethod_call('transform'), seq(bmesh_q, kwarg('v', expr))),
+  't': pmaps(qmethod_call('transform'), seq(bmesh_q, kwarg('m', expr))),
 
   'e': pmap(qmethod_call('extrude'), bmesh_qr),
-  'v': pmaps(qmethod_call('create_vert'), seq(bmesh_r, kwarg('m', expr))),
+  'v': pmaps(qmethod_call('create_vert'), seq(bmesh_r, kwarg('v', expr))),
   'd': pmap(qmethod_call('duplicate'), bmesh_qr),
   's': pmaps(qmethod_call('spin'),
              seq(bmesh_q, bmesh_r,
-                 kwarg('angle', expr),
+                 kwarg('angle', pmap(lambda x: f'({x}*_tau)', expr)),
                  maybe(kwarg('steps',  iseq(1, lit('*'), expr))),
                  maybe(kwarg('center', iseq(1, lit('@'), expr))),
                  maybe(kwarg('axis',   iseq(1, lit('^'), expr))),

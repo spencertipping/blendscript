@@ -4,8 +4,8 @@ Basic building blocks for grammars.
 
 from .peg import *
 
-p_word  = pmap(lambda s: s.decode(), re(r'[A-Za-z][A-Za-z0-9_\.]*'))
-p_lword = pmap(lambda s: s.decode(), re(r'[a-z][A-Za-z0-9_\.]*'))
+p_word  = re(r'[A-Za-z][A-Za-z0-9_\.]*')
+p_lword = re(r'[a-z][A-Za-z0-9_\.]*')
 
 p_int    = pmap(int,   re(r'-?\d+'))
 p_number = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',

@@ -8,6 +8,8 @@ from .peg   import *
 from .basic import *
 from .expr  import *
 
+from ..objects.function import *
+
 
 """
 Some design notes.
@@ -27,10 +29,11 @@ them when we set up the scene context. That way BlendScript is declarative.
 
 def clear_blendscript():
   for p in dir(bpy.data):
-    d = bpy.data[p]
+    d = getattr(bpy.data, p)
     if getattr(d, '__iter__', False):
       for x in d:
-        d.remove(x)
+        if x.get('added_by_blendscript'):
+          d.remove(x)
 
 
 def blender_add_object(name, obj):
@@ -39,9 +42,17 @@ def blender_add_object(name, obj):
   linked_obj = bpy.data.objects.new(name, obj)
   linked_obj['added_by_blendscript'] = True
   bpy.context.scene.collection.objects.link(linked_obj)
+  bpy.context.view_layer.objects.active = linked_obj
+  linked_obj.select_set(True)
+
+  bpy.ops.object.mode_set(mode='EDIT')
+  bpy.ops.object.mode_set(mode='OBJECT')
   return linked_obj.name
 
-defexprglobals(_blender_add_object=blender_add_object)
+
+defexprglobals(_blender_add_object=blender_add_object,
+               _clear_blendscript=fn(clear_blendscript))
 defexprop(**{
+  'BC': const('_clear_blendscript()', empty),
   'B:': pmaps(lambda n, o: f'_blender_add_object("{n or ""}", {o})',
               seq(maybe(p_lword), expr))})

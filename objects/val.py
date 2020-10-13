@@ -15,7 +15,11 @@ class method_call_op:
     self.args   = tuple(args)
     self.kwargs = kwargs
 
-  def __hash__(self):      return hash((self.method, self.args))
-  def __call__(self, obj): return getattr(obj, method)(*args, **kwargs)
+  def __hash__(self):
+    return hash((self.method, self.args, self.kwargs))
+
+  def __call__(self, obj):
+    return getattr(obj, self.method)(*self.args, **self.kwargs)
+
   def __str__(self):
     return f'call("f{self.method}", *{self.args}, **{self.kwargs})'

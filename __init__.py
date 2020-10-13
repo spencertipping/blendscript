@@ -21,7 +21,7 @@ bl_info = {
 }
 
 
-def compile(source):
+def compile(source, debug=False):
   """
   Compiles the specified BlendScript source, throwing an error or returning a
   Python function. The resulting function can be invoked on no arguments to
@@ -35,22 +35,21 @@ def compile(source):
   if i != len(source): raise Exception(
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
 
-  print(f"compiled blendscript to function: {f}")
-
+  if debug: print(f"compiled blendscript to function: {f}")
   return f
 
-def run(source):
+def run(source, **kwargs):
   """
   Runs the given source directly. This is a shorthand for compile(source)().
   """
-  return compile(source)()
+  return compile(source, **kwargs)()
 
-def live(source):
+def live(source, **kwargs):
   """
   Runs the given source directly. In the future this will do some automatic
   Blender object management to make it easier to work with generated objects.
   """
-  return run(source)
+  return run(source, **kwargs)
 
 
 class BlendScriptOp(bpy.types.Operator):
