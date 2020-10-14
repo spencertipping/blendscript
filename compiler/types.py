@@ -72,7 +72,7 @@ class blendscript_type:
   def __init__(self, name, *args):
     self.name = name
     self.args = args
-    self.h    = hash(name, tuple(args))
+    self.h    = hash((name, tuple(args)))
     blendscript_all_types.add(self)
 
   def convert_to(self, v, t):

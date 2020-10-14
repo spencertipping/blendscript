@@ -17,5 +17,11 @@ type_ops.add(**{
   'i':  const(t_int,    empty),
   'n':  const(t_number, empty),
   's':  const(t_string, empty),
+  'v2': const(t_vec2,   empty),
+  'v3': const(t_vec3,   empty),
+  'v4': const(t_vec4,   empty),
+  'm3': const(t_mat33,  empty),
+  'm4': const(t_mat44,  empty),
+
   '[':  pmap(t_list, iseq(0, type_expr, lit(']'))),
   '->': pmaps(t_fn, seq(type_expr, type_expr))})

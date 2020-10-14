@@ -9,8 +9,6 @@ towards CAD, engineering, and precision editing.
 BlendScript is largely expression-driven and is parsed using combinatory PEG.
 """
 
-import bpy
-
 from time import time
 
 from .parsers import expr
@@ -61,43 +59,3 @@ def live(source, **kwargs):
   t1 = time()
   print(f'blendscript: {int(1000 * (t1 - t0))}ms> {r}')
   return r
-
-
-class BlendScriptOp(bpy.types.Operator):
-  bl_idname  = "text.run_blendscript"
-  bl_label   = "Run BlendScript"
-  bl_options = {'REGISTER'}
-
-  def execute(self, context):
-    print('Running BlendScript...')
-    print(run(context.space_data.text.as_string()))
-    return {'FINISHED'}
-
-
-addon_keymaps = []
-
-def register():
-  bpy.utils.register_class(BlendScriptOp)
-
-  # Add the hotkey
-  wm = bpy.context.window_manager
-  kc = wm.keyconfigs.addon
-  if kc:
-    km = wm.keyconfigs.addon.keymaps.new(name='Text', space_type='TEXT_EDITOR')
-    kmi = km.keymap_items.new(BlendScriptOp.bl_idname, type='B', value='PRESS', alt=True)
-    addon_keymaps.append((km, kmi))
-
-  bpy.types.TEXT_MT_text.append(
-    lambda self, context: self.layout.operator(BlendScriptOp.bl_idname))
-
-def unregister():
-  bpy.utils.unregister_class(BlendScriptOp)
-
-  # Remove the hotkey
-  for km, kmi in addon_keymaps:
-    km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
-
-
-if __name__ == '__main__':
-  register()
