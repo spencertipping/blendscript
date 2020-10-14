@@ -11,8 +11,7 @@ from ..objects.function import *
 from ..objects.val      import *
 
 
-def whitespaced(p):
-  return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
+def whitespaced(p): return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
 
 expr_globals = {}
 """
@@ -37,8 +36,8 @@ def defexprop(**ps):
   """
   for op, p in ps.items():
     if op in expr_ops.ps: raise Exception(
-        f'defexprop: tried to redefine existing operator {op} '
-        f'(if you really want to do this, delete expr_ops["{op}"] first)')
+      f'defexprop: tried to redefine existing operator {op} '
+      f'(if you really want to do this, delete expr_ops["{op}"] first)')
   expr_ops.add(**ps)
 
 def defexprliteral(*ps):
