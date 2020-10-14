@@ -9,7 +9,6 @@ the resulting Python code is compiled.
 
 from .types import *
 
-
 class val:
   """
   A BlendScript value produced by the specified code and having type t. code
@@ -17,6 +16,7 @@ class val:
   concatenated.
   """
   bound_globals = {}
+  global_vals = {}
   gensym_id = 0
 
   def __init__(self, t, code, ref=None):
@@ -35,9 +35,7 @@ class val:
     self.ref  = ref
 
   def __repr__(self):
-    valstr = str(self)
-    if self.ref is not None: valstr += f' (== {self.ref})'
-    return f'{valstr} :: {str(self.t)}'
+    return f'{str(self) if self.ref is None else repr(self.ref)} :: {str(self.t)}'
 
   def compile(self):
     return eval(str(self), globals=val.bound_globals)
@@ -47,10 +45,13 @@ class val:
     """
     Binds a global value and produces a val that refers to it.
     """
+    if v in cls.global_vals: return cls.global_vals[v]
     gs = f'_G{cls.gensym_id}'
+    r = val(t, gs, ref=v)
     cls.gensym_id += 1
     cls.bound_globals[gs] = v
-    return val(t, gs, ref=v)
+    cls.global_vals[v] = r
+    return r
 
   @classmethod
   def lit(cls, t, v):
@@ -61,6 +62,15 @@ class val:
       f'{v} is not sufficiently serializable to use with val.lit()')
 
     return cls(t, repr(v), ref=v)
+
+  @classmethod
+  def int(cls, i): return cls.lit(t_int, int(i))
+
+  @classmethod
+  def str(cls, s): return cls.lit(t_string, str(s))
+
+  @classmethod
+  def float(cls, n): return cls.lit(t_number, float(n))
 
   @classmethod
   def fn(cls, rt, at, f):
@@ -88,10 +98,10 @@ class val:
   def str_into(self, l):
     if type(self.code) == str:
       l.append(self.code)
-      return self
-    for c in self.code:
-      if type(c) == str: l.append(c)
-      else:              c.str_into(l)
+    else:
+      for c in self.code:
+        if type(c) == str: l.append(c)
+        else:              c.str_into(l)
     return self
 
   def __str__(self):
@@ -100,7 +110,7 @@ class val:
     return ''.join(l)
 
   def convert_to(self, t):
-    return self.t.convert_to(self.code, t)
+    return self.t.convert_to(self, t)
 
   def __call__(self, x):
     """

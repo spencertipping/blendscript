@@ -1,6 +1,8 @@
 """
-Parsers that produce types. This is used to provide type constraints for
-function arguments.
+Parsers that produce types.
+
+These parsers are used to provide type constraints for function arguments, and
+anywhere else where a type constraint might be necessary.
 """
 
 from .peg   import *

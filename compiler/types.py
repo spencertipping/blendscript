@@ -6,6 +6,14 @@ what those values are made of. Python takes care of structure and we pick up
 with semantics.
 """
 
+
+# TODO
+# We need some pattern matching for this. Not a lot, but some. Otherwise we
+# won't be able to convert (-> i i) to i via the anything-to-: loophole.
+#
+# I think it's fine to just use _ in type conversions.
+
+
 blendscript_type_conversions = {}
 """
 A dictionary of {(fromtype, totype): lambda} values that transform blendscript
@@ -81,7 +89,7 @@ class blendscript_type:
     this type to the blendscript type "t", or throws an error at compile-time
     if the value cannot be converted.
     """
-    if self == t or t.name == '_': return v
+    if self == t or t.name == '_' or self.name == '.': return v
 
     converter = blendscript_type_conversions.get((self, t))
     if converter is not None:
@@ -116,9 +124,13 @@ class blendscript_type:
 
 t_none = blendscript_type(':')
 """
-An unspecified/unprovided value. Nothing can be coerced to this, but parsed
-expressions can include it and it can be promoted into other types as a
-default.
+An unspecified/unprovided value.
+"""
+
+t_free = blendscript_type('.')
+"""
+A value that can be manipulated with no coercions. Untyped function arguments
+have this type.
 """
 
 t_any = blendscript_type('_')

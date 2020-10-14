@@ -7,6 +7,8 @@ from itertools import chain
 
 from .peg               import *
 from .basic             import *
+from .types             import *
+
 from ..compiler.val     import *
 from ..runtime.fn       import *
 from ..runtime.method   import *
@@ -20,36 +22,17 @@ expr          = whitespaced(alt(expr_ops, expr_literals, expr_var))
 compiled_expr = pmap(method('compile'), expr)
 
 
-# NOTE: we don't parse anything into lists because lists are mutable and thus
-# not hashable. Instead, we rely exclusively on tuples to represent sequence
-# data.
-def qtuple(xs): return f'({",".join(xs)},)' if len(xs) > 0 else '()'
-def qargs(xs):  return ','.join(filter(None, xs))
-
-def qmethod_call(m):
-  return lambda *args: f'_method_call_op("{m}", {qargs(args)})'
-
-def quoted(p):   return pmap(repr, p)
-def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
-
-
 expr_literals.add(
-  pmap(lambda n: f'({n})', p_number),
-
-  quoted(iseq(1, re(r"'"), p_word)),
-
-  # Parens have no effect, they just help legibility
-  iseq(1, lit('('), expr, lit(')')),
+  pmap(val.float, p_number),
+  pmap(val.str, iseq(1, re(r"'"), p_word)),
 
   # Python expressions within {}
-  pmap(lambda m: f'({m.decode()})', re(r'\{([^\}]+)\}')),
-
-  # A currying marker: +3; is the same as (+3) but one byte shorter
-  const(None, re(r';')),
+  pmaps(lambda v, t, _: val(t, v),
+        seq(re(r'\{([^\}:]+)::'), type_expr, lit('}'))),
 
   # Underscore always parses as a single identifier, even when immediately
   # followed by ident characters.
-  pmap(method('decode'), re(r'_')))
+  re(r'_'))
 
 
 # TODO: convert the partial applications to section() objects once we have them
@@ -76,10 +59,13 @@ def ternop(f):
 def keyify(x): return x if type(x) == str else int(x)
 
 expr_ops.add(**{
+  '(': iseq(0, expr, lit(')')),
+
   'I': unop(lambda n: f'_range(_int({n}))'),
   'L': unop(lambda x: f'_tuple({x})'),
 
-  '[': pmap(qtuple, iseq(0, rep(expr), whitespaced(lit(']')))),
+  '[': pmap(lambda v: val.list(t_free, *v),
+            iseq(0, rep(expr), whitespaced(lit(']')))),
 
   '>':  binop(lambda x, y: f'({y} > {x})'),
   '>=': binop(lambda x, y: f'({y} >= {x})'),
@@ -107,8 +93,6 @@ expr_ops.add(**{
   '/#': unop(lambda x: f'_len({x})'),
 
   '`': binop(lambda i, xs: f'({xs}[_keyify({i})])'),
-  '`[': pmap(lambda ps: f'{qtuple(ps[0])}[-1]',
-             seq(rep(expr, min=1), re(r'\]'))),
 
   '**': binop(lambda x, y: f'({y} ** {x})'),
   '++':  unop(lambda x:    f'_tuple(_chain(*({x})))'),
