@@ -36,6 +36,12 @@ expr_literals.add(
   re(r'_'))
 
 
+# TODO: parse-time lambda parameter type assignment, binding, and identifier
+# resolution
+
+# TODO: full hindley-milner
+
+
 expr_ops.add(**{
   '(': iseq(0, expr, lit(')')),
 
