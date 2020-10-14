@@ -7,9 +7,9 @@ from .peg import *
 p_word  = re(r'[A-Za-z][A-Za-z0-9_\.]*')
 p_lword = re(r'[a-z][A-Za-z0-9_\.]*')
 
-p_int    = pmap(int,   re(r'-?\d+'))
-p_number = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
-                          r'-?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?'))
+p_int   = pmap(int,   re(r'-?\d+'))
+p_float = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
+                         r'-?\d+\.(?:\d*)?(?:[eE][-+]?\d+)?'))
 
 p_comment    = re(r'#\s+.*\n?')
 p_whitespace = re(r'\s+')

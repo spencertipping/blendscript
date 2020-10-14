@@ -122,3 +122,9 @@ class val:
 
     rtype, atype = self.t.args
     return val(rtype, [self, '(', x.convert_to(atype), ')'])
+
+  def __if__(self, t, f):
+    """
+    Create a ternary expression. If the branch types differ, they are coerced
+    to the type of the true-branch.
+    """

@@ -17,8 +17,8 @@ type_expr = whitespaced(type_ops)
 type_ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
 
-  ':':  const(t_none,   empty),
   '_':  const(t_any,    empty),
+  '.':  const(t_free,   empty),
   'i':  const(t_int,    empty),
   'n':  const(t_number, empty),
   's':  const(t_string, empty),

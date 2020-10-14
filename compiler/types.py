@@ -12,6 +12,9 @@ with semantics.
 # won't be able to convert (-> i i) to i via the anything-to-: loophole.
 #
 # I think it's fine to just use _ in type conversions.
+#
+# Alternatively, each type constructor (function, atom, etc) should have its
+# own class that understands how to work with it.
 
 
 blendscript_type_conversions = {}
@@ -121,11 +124,6 @@ class blendscript_type:
                               self.name == v.name   and \
                               self.args == v.args
 
-
-t_none = blendscript_type(':')
-"""
-An unspecified/unprovided value.
-"""
 
 t_free = blendscript_type('.')
 """
