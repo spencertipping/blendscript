@@ -34,14 +34,22 @@ class val:
     self.code = code
     self.ref  = ref
 
+  def __repr__(self):
+    valstr = str(self)
+    if self.ref is not None: valstr += f' (== {self.ref})'
+    return f'{valstr} :: {str(self.t)}'
+
+  def compile(self):
+    return eval(str(self), globals=val.bound_globals)
+
   @classmethod
   def of(cls, t, v):
     """
     Binds a global value and produces a val that refers to it.
     """
-    gs = f'_G{val.gensym_id}'
-    gensym_id += 1
-    bound_globals[gs] = v
+    gs = f'_G{cls.gensym_id}'
+    cls.gensym_id += 1
+    cls.bound_globals[gs] = v
     return val(t, gs, ref=v)
 
   @classmethod
@@ -52,7 +60,15 @@ class val:
     if eval(repr(v)) != v: raise Exception(
       f'{v} is not sufficiently serializable to use with val.lit()')
 
-    return val(t, repr(v), ref=v)
+    return cls(t, repr(v), ref=v)
+
+  @classmethod
+  def fn(cls, rt, at, f):
+    """
+    Converts a unary Python function with the specified argument types into a
+    BlendScript function.
+    """
+    return cls.of(t_fn(rt, at), f)
 
   @classmethod
   def list(cls, t, *xs):
@@ -60,19 +76,28 @@ class val:
     Returns a val representing a homogeneous list of elements. This will be
     compiled as a Python tuple.
     """
-    if len(xs) == 0: return val(t_list(t), '()')
+    if len(xs) == 0: return cls(t_list(t), '()')
 
     ys = ['(']
     for x in xs:
-      ys.append(x.convert_to(t)).append(',')
+      ys.append(x.convert_to(t))
+      ys.append(',')
     ys.append(')')
-    return val(t_list(t), ys)
+    return cls(t_list(t), ys)
 
-  def compile(self):
-    return eval(str(self), globals=bound_globals)
+  def str_into(self, l):
+    if type(self.code) == str:
+      l.append(self.code)
+      return self
+    for c in self.code:
+      if type(c) == str: l.append(c)
+      else:              c.str_into(l)
+    return self
 
   def __str__(self):
-    return self.code if type(self.code) == str else ''.join(self.code)
+    l = []
+    self.str_into(l)
+    return ''.join(l)
 
   def convert_to(self, t):
     return self.t.convert_to(self.code, t)

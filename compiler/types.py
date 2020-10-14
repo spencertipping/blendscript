@@ -81,7 +81,7 @@ class blendscript_type:
     this type to the blendscript type "t", or throws an error at compile-time
     if the value cannot be converted.
     """
-    if self == t: return v
+    if self == t or t.name == '_': return v
 
     converter = blendscript_type_conversions.get((self, t))
     if converter is not None:
@@ -102,10 +102,10 @@ class blendscript_type:
     like everything else in BlendScript. So, you know, not entirely
     human-readable.
     """
-    xs = ''
-    if   len(args) == 1: xs = ' ' + str(self.args[0])
-    elif len(args) >  1: xs = f'[{" ".join(self.args)}]'
-    return f'{self.name}{xs}'
+    if len(self.args):
+      return f'({self.name} {" ".join(map(str, self.args))})'
+    else:
+      return self.name
 
   def __hash__(self): return self.h
   def __eq__(self, v): return type(self) == type(v) and \
@@ -119,6 +119,12 @@ t_none = blendscript_type(':')
 An unspecified/unprovided value. Nothing can be coerced to this, but parsed
 expressions can include it and it can be promoted into other types as a
 default.
+"""
+
+t_any = blendscript_type('_')
+"""
+A value that is never used. Everything can be coerced to this, but it cannot be
+coerced to anything.
 """
 
 t_number = blendscript_type('n')

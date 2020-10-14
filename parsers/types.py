@@ -13,7 +13,10 @@ type_ops  = dsp()
 type_expr = whitespaced(type_ops)
 
 type_ops.add(**{
+  '(':  iseq(0, type_expr, lit(')')),
+
   ':':  const(t_none,   empty),
+  '_':  const(t_any,    empty),
   'i':  const(t_int,    empty),
   'n':  const(t_number, empty),
   's':  const(t_string, empty),
@@ -23,5 +26,5 @@ type_ops.add(**{
   'm3': const(t_mat33,  empty),
   'm4': const(t_mat44,  empty),
 
-  '[':  pmap(t_list, iseq(0, type_expr, lit(']'))),
+  '[]': pmap(t_list, type_expr),
   '->': pmaps(t_fn, seq(type_expr, type_expr))})
