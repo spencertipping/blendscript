@@ -114,6 +114,13 @@ class blendscript_type:
                               self.args == v.args
 
 
+t_none = blendscript_type(':')
+"""
+An unspecified/unprovided value. Nothing can be coerced to this, but parsed
+expressions can include it and it can be promoted into other types as a
+default.
+"""
+
 t_number = blendscript_type('n')
 t_string = blendscript_type('s')
 t_int    = blendscript_type('i')

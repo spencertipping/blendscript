@@ -39,10 +39,34 @@ class val:
     """
     Binds a global value and produces a val that refers to it.
     """
-    gs = f'_G{gensym_id}'
+    gs = f'_G{val.gensym_id}'
     gensym_id += 1
     bound_globals[gs] = v
     return val(t, gs, ref=v)
+
+  @classmethod
+  def lit(cls, t, v):
+    """
+    Returns a val that compiles to a literal.
+    """
+    if eval(repr(v)) != v: raise Exception(
+      f'{v} is not sufficiently serializable to use with val.lit()')
+
+    return val(t, repr(v), ref=v)
+
+  @classmethod
+  def list(cls, t, *xs):
+    """
+    Returns a val representing a homogeneous list of elements. This will be
+    compiled as a Python tuple.
+    """
+    if len(xs) == 0: return val(t_list(t), '()')
+
+    ys = ['(']
+    for x in xs:
+      ys.append(x.convert_to(t)).append(',')
+    ys.append(')')
+    return val(t_list(t), ys)
 
   def compile(self):
     return eval(str(self), globals=bound_globals)
@@ -58,8 +82,8 @@ class val:
     Coerce the argument into the required type, then apply the function and
     reduce to the return type.
     """
-    if self.t.name != '->': raise Exception(
-      f'cannot call non-function {self} on {x}')
+    if self.t.name != '->':
+      raise Exception(f'cannot call non-function {self} on {x}')
 
     rtype, atype = self.t.args
     return val(rtype, [self, '(', x.convert_to(atype), ')'])

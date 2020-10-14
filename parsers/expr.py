@@ -75,14 +75,7 @@ def ternop(f):
 
 def keyify(x): return x if type(x) == str else int(x)
 
-defexprglobals(_keyify=keyify,
-               _chain=chain,
-               _tuple=tuple,
-               _len=len,
-               _int=int,
-               _range=range)
-
-defexprop(**{
+expr_ops.add(**{
   'I': unop(lambda n: f'_range(_int({n}))'),
   'L': unop(lambda x: f'_tuple({x})'),
 
