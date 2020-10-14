@@ -14,3 +14,5 @@ p_number = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
 p_comment    = re(r'#\s+.*\n?')
 p_whitespace = re(r'\s+')
 p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
+
+def whitespaced(p): return iseq(1, maybe(p_ignore), p, maybe(p_ignore))

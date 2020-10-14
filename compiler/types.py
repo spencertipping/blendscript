@@ -7,6 +7,20 @@ with semantics.
 """
 
 blendscript_type_conversions = {}
+"""
+A dictionary of {(fromtype, totype): lambda} values that transform blendscript
+vals between compile-time types. Define new ones with deftypeconv().
+"""
+
+blendscript_type_transitive_paths = {}
+"""
+A cache of solved transitive paths between types. If a direct pairing doesn't
+exist, BlendScript will search for an intermediate bridge type that it can
+convert through. If one is found, that bridge type is cached here.
+"""
+
+blendscript_all_types = set()
+
 
 def deftypeconv(fromtype, totype, f):
   """
@@ -26,18 +40,40 @@ def deftypeconv(fromtype, totype, f):
   blendscript_type_conversions[(fromtype, totype)] = f
 
 
+def transitive_conversion_bridge(fromtype, totype):
+  """
+  Attempts to find a bridge type for which (fromtype, bridge) and (bridge,
+  totype) are defined. If one is found, we return it and save it in
+  blendscript_type_transitive_paths; otherwise we return None.
+
+  If multiple bridges exist, one is chosen arbitrarily.
+  """
+  tk     = (fromtype, totype)
+  bridge = blendscript_type_transitive_paths.get(tk)
+  if bridge is not None: return bridge
+
+  for b in blendscript_all_types:
+    if (fromtype, b) in blendscript_type_conversions and \
+        (b, totype) in blendscript_type_conversions:
+      blendscript_type_transitive_paths[tk] = b
+      return b
+
+  return None
+
+
 class blendscript_type:
   """
   A data class used to represent BlendScript types as Python values.
-  BlendScript types are defined primarily by their conversion mechanics, which
-  are managed externally using a dictionary from name to name.
+  BlendScript types are defined primarily by their conversion mechanics.
 
   Structurally, BlendScript types are encoded like S-expressions: a type name
   with zero or more arguments, each of which is itself a BlendScript type.
   """
   def __init__(self, name, *args):
     self.name = name
-    self.args = tuple(args)
+    self.args = args
+    self.h    = hash(name, tuple(args))
+    blendscript_all_types.add(self)
 
   def convert_to(self, v, t):
     """
@@ -47,10 +83,18 @@ class blendscript_type:
     """
     if self == t: return v
 
-    converter = blendscript_type_conversions.get((self.name, t.name))
-    if converter is None: raise Exception(
-      f'blendscript_type.convert_to: no converter between {self} and {t}')
-    return converter(v, fromtype=self, totype=t)
+    converter = blendscript_type_conversions.get((self, t))
+    if converter is not None:
+      return converter(v, fromtype=self, totype=t)
+
+    bridge = blendscript_type_transitive_paths.get((self, t))
+    if bridge is not None:
+      c1 = blendscript_type_conversions[(self, bridge)]
+      c2 = blendscript_type_conversions[(bridge, t)]
+      return c2(c1(v, self, bridge), bridge, t)
+
+    raise Exception(
+      f'blendscript_type: no converter or bridge between {self} and {t}')
 
   def __str__(self):
     """
@@ -59,13 +103,14 @@ class blendscript_type:
     human-readable.
     """
     xs = ''
-    if len(args) == 1: xs = ' ' + str(self.args[0])
-    elif len(args) > 1: xs = f'[{" ".join(self.args)}]'
+    if   len(args) == 1: xs = ' ' + str(self.args[0])
+    elif len(args) >  1: xs = f'[{" ".join(self.args)}]'
     return f'{self.name}{xs}'
 
-  def __hash__(self): return hash((self.name, self.args))
+  def __hash__(self): return self.h
   def __eq__(self, v): return type(self) == type(v) and \
-                              self.name == v.name and \
+                              self.h    == v.h      and \
+                              self.name == v.name   and \
                               self.args == v.args
 
 
@@ -88,9 +133,9 @@ def t_list(elem_type):
   """
   return blendscript_type('[]', elem_type)
 
-def t_fn(rtype, *args):
+def t_fn(rtype, atype):
   """
-  A function with a specified return type and argument types. The return type
+  A function with a specified return type and argument type. The return type
   is always represented first, as the thing the arrow points to.
   """
-  return blendscript_type('->', rtype, *args)
+  return blendscript_type('->', rtype, atype)

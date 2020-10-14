@@ -10,7 +10,7 @@ from .peg   import *
 from .basic import *
 from .expr  import *
 
-from ..objects.function import *
+from ..runtime.fn import *
 
 
 """

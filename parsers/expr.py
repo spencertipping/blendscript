@@ -5,58 +5,19 @@ and matrix expressions. The result is compiled into a Python function.
 
 from itertools import chain
 
-from .peg             import *
-from .basic           import *
-from ..runtime.method import *
+from .peg               import *
+from .basic             import *
+from ..compiler.val     import *
+from ..runtime.fn       import *
+from ..runtime.method   import *
 
-
-def whitespaced(p): return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
-
-expr_globals = {}
-"""
-All global values available to compiled code. Modify this with
-defexprglobals().
-"""
 
 expr_ops      = dsp()
 expr_literals = alt()
 expr_var      = p_lword
 expr          = whitespaced(alt(expr_ops, expr_literals, expr_var))
 
-compiled_expr = pmap(
-  lambda body: eval(f'_fn(lambda: {body}, source={repr(body)})', expr_globals),
-  expr)
-
-
-def defexprop(**ps):
-  """
-  Defines new operators, each with a constant string prefix. Verifies that you
-  aren't doing something awful, for a sufficiently narrow definition of awful.
-  """
-  for op, p in ps.items():
-    if op in expr_ops.ps: raise Exception(
-      f'defexprop: tried to redefine existing operator {op} '
-      f'(if you really want to do this, delete expr_ops["{op}"] first)')
-  expr_ops.add(**ps)
-
-def defexprliteral(*ps):
-  """
-  Defines new literal forms, each a bare parser consuming input and producing a
-  Python expression as a string.
-  """
-  expr_literals.add(*ps)
-
-def defexprglobals(**gs):
-  """
-  Binds new globals within the compiled environment, complaining if you try to
-  break stuff.
-  """
-  for g, v in gs.items():
-    if not g.startswith('_') or len(g) < 2: raise Exception(
-      f'defexprglobals: the name {g} can collide with user-bound variables')
-    if g in expr_globals and expr_globals[g] != v: raise Exception(
-      f'defexprglobals: {g} is already defined as a different value')
-    expr_globals[g] = v
+compiled_expr = pmap(method('compile'), expr)
 
 
 # NOTE: we don't parse anything into lists because lists are mutable and thus
@@ -65,7 +26,6 @@ def defexprglobals(**gs):
 def qtuple(xs): return f'({",".join(xs)},)' if len(xs) > 0 else '()'
 def qargs(xs):  return ','.join(filter(None, xs))
 
-defexprglobals(_fn=fn, _method_call_op=method_call_op)
 def qmethod_call(m):
   return lambda *args: f'_method_call_op("{m}", {qargs(args)})'
 
@@ -73,7 +33,7 @@ def quoted(p):   return pmap(repr, p)
 def kwarg(k, p): return pmap(lambda s: f'{k}={s}', p)
 
 
-defexprliteral(
+expr_literals.add(
   pmap(lambda n: f'({n})', p_number),
 
   quoted(iseq(1, re(r"'"), p_word)),
