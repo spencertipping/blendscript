@@ -5,10 +5,9 @@ and matrix expressions. The result is compiled into a Python function.
 
 from itertools import chain
 
-from .peg               import *
-from .basic             import *
-from ..objects.function import *
-from ..objects.val      import *
+from .peg             import *
+from .basic           import *
+from ..runtime.method import *
 
 
 def whitespaced(p): return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
