@@ -75,10 +75,13 @@ def repl():
     try:
       lines.append(input('>>> ' if len(lines) == 0 else '... '))
       try:
+        t0 = time()
         t, v = run("".join(lines))
-        print(f'->  {v} :: {t}')
+        t1 = time()
+        print(f'{v} :: {t} ({int((t1 - t0) * 1000)}ms)')
         lines = []
       except SyntaxError:
+        # Assume we're collecting more lines of input
         pass
 
     except EOFError:
@@ -90,5 +93,6 @@ def repl():
         print()
         break
 
-    except InterruptedError:
+    except KeyboardInterrupt:
+      print()
       lines = []
