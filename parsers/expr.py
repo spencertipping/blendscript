@@ -3,21 +3,19 @@ BlendScript implements a Polish-notation calculator you can use to build vector
 and matrix expressions. The result is compiled into a Python function.
 """
 
-from itertools import chain
+from functools import reduce
 
-from .peg               import *
-from .basic             import *
-from .types             import *
+from .peg           import *
+from .basic         import *
+from .types         import *
 
-from ..compiler.val     import *
-from ..runtime.fn       import *
-from ..runtime.method   import *
+from ..compiler.val import *
+from ..runtime.fn   import *
 
 
 expr_ops      = dsp()
 expr_literals = alt()
-expr_var      = p_lword
-expr          = whitespaced(alt(expr_ops, expr_literals, expr_var))
+expr          = whitespaced(alt(expr_ops, expr_literals))
 
 compiled_expr = pmap(method('compile'), expr)
 
@@ -29,7 +27,7 @@ expr_literals.add(
 
   # Python expressions within {}
   pmaps(lambda v, t, _: val(t, v),
-        seq(re(r'\{([^\}:]+)::'), type_expr, lit('}'))),
+        iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))),
 
   # Underscore always parses as a single identifier, even when immediately
   # followed by ident characters.
@@ -42,10 +40,15 @@ expr_literals.add(
 # TODO: full hindley-milner
 
 
+def list_type(xs):
+  if len(xs) == 0: return t_dynamic
+  return reduce(lambda x, y: x.upper_bound(y), (x.t for x in xs))
+
+
 expr_ops.add(**{
   '(': iseq(0, expr, lit(')')),
 
-  '[': pmap(lambda v: val.list(v[0].t if len(v) else t_free, *v),
+  '[': pmap(lambda v: val.list(list_type(v), *v),
             iseq(0, rep(iseq(0, expr, maybe(lit(',')))),
                  whitespaced(lit(']')))),
 

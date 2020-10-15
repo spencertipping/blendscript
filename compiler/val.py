@@ -125,6 +125,9 @@ class val:
 
   def __if__(self, t, f):
     """
-    Create a ternary expression. If the branch types differ, they are coerced
-    to the type of the true-branch.
+    Create a ternary expression, typed as the upper bound of both branch types.
     """
+    ub = t.t.upper_bound(f.t)
+    return val(ub, ['(', t.convert_to(ub),
+                    ' if ', self.convert_to(t_bool),
+                    ' else ', f.convert_to(ub), ')'])

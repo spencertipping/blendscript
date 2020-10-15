@@ -16,6 +16,13 @@ with semantics.
 # Alternatively, each type constructor (function, atom, etc) should have its
 # own class that understands how to work with it.
 
+# TODO
+# Yep, each broad type class should be its own Python class. t_dynamic, for
+# example, should provide a passthrough convert_to().
+#
+# The binary relationship between from-types and to-types complicates this a
+# little.
+
 
 blendscript_type_conversions = {}
 """
@@ -86,13 +93,19 @@ class blendscript_type:
     self.h    = hash((name, tuple(args)))
     blendscript_all_types.add(self)
 
+  def upper_bound(self, t):
+    """
+    Finds the upper coercion bound between this and another type.
+    """
+    return self      # FIXME: do this for real
+
   def convert_to(self, v, t):
     """
     Returns a **string of code** that converts "v" (also a string of code) from
     this type to the blendscript type "t", or throws an error at compile-time
     if the value cannot be converted.
     """
-    if self == t or t.name == '_' or self.name == '.': return v
+    if self == t or t == t_any or self == t_dynamic: return v
 
     converter = blendscript_type_conversions.get((self, t))
     if converter is not None:
@@ -125,10 +138,9 @@ class blendscript_type:
                               self.args == v.args
 
 
-t_free = blendscript_type('.')
+t_dynamic = blendscript_type('.')
 """
-A value that can be manipulated with no coercions. Untyped function arguments
-have this type.
+A value that can be manipulated with no coercions.
 """
 
 t_any = blendscript_type('_')
@@ -140,6 +152,7 @@ coerced to anything.
 t_number = blendscript_type('n')
 t_string = blendscript_type('s')
 t_int    = blendscript_type('i')
+t_bool   = blendscript_type('b')
 t_vec2   = blendscript_type('v2')
 t_vec3   = blendscript_type('v3')
 t_vec4   = blendscript_type('v4')
