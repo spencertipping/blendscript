@@ -9,6 +9,7 @@ Parsing expression grammars.
 
 import re as regex
 
+
 def parserify(f):
   """
   Returns f after turning it into a parser for the parser() assertion.
@@ -26,11 +27,13 @@ def parser(f):
 def fail(e):  return (e, None)
 def ok(v, i): return (v, i)
 
+
 def none(source, index): return fail(None)
 def empty(source, index): return ok(None, index)
 
 parserify(none)
 parserify(empty)
+
 
 def lit(k):
   """
@@ -41,6 +44,7 @@ def lit(k):
     sub = s[i:i+len(k)]
     return (sub.decode(), i + len(k)) if sub == k else fail(None)
   return parserify(f)
+
 
 def re(*rs):
   """
@@ -62,15 +66,17 @@ def re(*rs):
 
   return parserify(f)
 
+
 def const(k, p):
   """
   Succeeds iff p succeeds, but always returns k.
   """
   parser(p)
   def f(s, i):
-    (_, i2) = p(s, i)
+    _, i2 = p(s, i)
     return (k if i2 is not None else None, i2)
   return parserify(f)
+
 
 def seq(*ps):
   """
@@ -81,16 +87,21 @@ def seq(*ps):
   def f(s, i):
     vs = []
     for p in ps:
-      (v, i) = p(s, i)
+      v, i = p(s, i)
       if i is None: return (v, i)
       vs.append(v)
     return (vs, i)
   return parserify(f)
 
+
 class alt:
   """
-  Early-commit alternative choices. The first parser that succeeds will be
-  chosen. alt() is a class that you can later modify by using .add(*ps).
+  Early-commit alternative choices. The _last_ parser that succeeds will be
+  chosen. alt() is a class that you can later modify by using .add(*ps) and
+  pop().
+
+  You can access the last parser in the series (the one with highest
+  precedence) using .last().
   """
   def __init__(self, *ps):
     self.ps = []
@@ -98,8 +109,8 @@ class alt:
     self.add(*ps)
 
   def __call__(self, s, i):
-    for p in self.ps:
-      (v, i2) = p(s, i)
+    for p in reversed(self.ps):
+      v, i2 = p(s, i)
       if i2 is not None:
         return (v, i2)
     return fail(None)
@@ -108,10 +119,19 @@ class alt:
     for p in ps: self.ps.append(parser(p))
     return self
 
+  def pop(self):
+    self.ps.pop()
+    return self
+
+  def last(self):
+    return self.ps[-1]
+
+
 class dsp:
   """
-  Constant-prefix dispatch parsing. The longest matching prefix will chosen
-  _regardless of whether its parser then succeeds or fails_.
+  Constant-prefix dispatch parsing. We then attempt to parse using the longest
+  matching prefix, falling back to any available shorter prefixes and then
+  failing.
   """
   def __init__(self, **ps):
     self.ps = {}
@@ -122,7 +142,9 @@ class dsp:
   def __call__(self, s, i):
     for l, d in self.length_dicts:
       sub = s[i:i+l]
-      if sub in d: return d[sub](s, i+l)
+      if sub in d:
+        v, i2 = d[sub](s, i+l)
+        if i2 is not None: return (v, i2)
     return fail(None)
 
   def regen_length_dicts(self):
@@ -143,6 +165,7 @@ class dsp:
       self.ps[prefix] = parser(p)
     return self.regen_length_dicts()
 
+
 def rep(p, min=0, max=None):
   """
   Zero or more repetitions of the specified parser, the results returned in a
@@ -154,7 +177,7 @@ def rep(p, min=0, max=None):
   def f(s, i):
     vs = []
     while max is None or len(vs) < max:
-      (v, i2) = p(s, i)
+      v, i2 = p(s, i)
       if i2 is None:
         if min <= len(vs) and (max is None or len(vs) <= max):
           return ok(vs, i)
@@ -166,6 +189,21 @@ def rep(p, min=0, max=None):
     return ok(vs, i)
   return parserify(f)
 
+
+def plus(p):
+  """
+  One or more iterations of the specified parser.
+  """
+  return rep(p, min=1)
+
+
+def exactly(n, p):
+  """
+  Exactly some number of copies of the specified parser.
+  """
+  return rep(p, min=n, max=n)
+
+
 def maybe(p):
   """
   Attempts the parser, successfully returning None if it fails. If it succeeds,
@@ -173,9 +211,10 @@ def maybe(p):
   """
   parser(p)
   def f(s, i):
-    (v, i2) = p(s, i)
+    v, i2 = p(s, i)
     return ok(v, i2) if i2 is not None else ok(None, i)
   return parserify(f)
+
 
 def pmap(f, p):
   """
@@ -184,19 +223,10 @@ def pmap(f, p):
   """
   parser(p)
   def g(s, i):
-    (v, i2) = p(s, i)
+    v, i2 = p(s, i)
     return (v if i2 is None else f(v), i2)
   return parserify(g)
 
-def pif(f, p):
-  """
-  Succeeds iff the parser succeeds, and if f returns true on its value.
-  """
-  parser(p)
-  def g(s, i):
-    (v, i2) = p(s, i)
-    return (v, i2) if i2 is not None and f(v) else (None, None)
-  return parserify(g)
 
 def pmaps(f, p):
   """
@@ -204,6 +234,31 @@ def pmaps(f, p):
   arguments into the function.
   """
   return pmap(lambda xs: f(*xs), p)
+
+
+def pflatmap(p):
+  """
+  If p succeeds and returns r, then parses the continuation using r, which must
+  itself be a parser. r's return value is the return value of the flatmap.
+  """
+  parser(p)
+  def g(s, i):
+    r, i2 = p(s, i)
+    if i2 is None: return (r, i2)
+    return parser(r)(s, i2)
+  return parserify(g)
+
+
+def pif(f, p):
+  """
+  Succeeds iff the parser succeeds, and if f returns true on its value.
+  """
+  parser(p)
+  def g(s, i):
+    v, i2 = p(s, i)
+    return (v, i2) if i2 is not None and f(v) else (None, None)
+  return parserify(g)
+
 
 def iseq(ix, *ps):
   """
