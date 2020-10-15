@@ -7,8 +7,7 @@ This module defines the structure of all expression grammars.
 
 from functools import reduce
 
-from .peg   import *
-from .basic import *
+from .peg import *
 
 
 p_comment    = re(r'#\s+.*\n?')

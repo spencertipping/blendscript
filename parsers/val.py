@@ -24,7 +24,8 @@ val_expr.literals.add(
   pmap(val.str,   re(r'"(\S*)')),
 
   # Python expressions within {}
-  pmaps(val, iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
+  pmaps(lambda t, v: val(t, f'({v})'),
+        iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
 
 val_expr.ops.add(**{
