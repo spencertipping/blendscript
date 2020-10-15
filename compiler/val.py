@@ -35,7 +35,8 @@ class val:
     self.ref  = ref
 
   def __repr__(self):
-    return f'{str(self) if self.ref is None else repr(self.ref)} :: {str(self.t)}'
+    typestr = '' if self.t == t_dynamic else f' :: {str(self.t)}'
+    return f'{str(self) if self.ref is None else repr(self.ref)}{typestr}'
 
   def compile(self):
     return eval(str(self), globals=val.bound_globals)
@@ -95,6 +96,11 @@ class val:
     ys.append(')')
     return cls(t_list(t), ys)
 
+  def __str__(self):
+    l = []
+    self.str_into(l)
+    return ''.join(l)
+
   def str_into(self, l):
     if type(self.code) == str:
       l.append(self.code)
@@ -104,20 +110,16 @@ class val:
         else:              c.str_into(l)
     return self
 
-  def __str__(self):
-    l = []
-    self.str_into(l)
-    return ''.join(l)
-
   def convert_to(self, t):
-    return self.t.convert_to(self, t)
+    if t == self.t: return self
+    return self.t.convert_value(t, self)
 
   def __call__(self, x):
     """
     Coerce the argument into the required type, then apply the function and
     reduce to the return type.
     """
-    if self.t.name != '->':
+    if self.t != t_dynamic and self.t.name != '->':
       raise Exception(f'cannot call non-function {self} on {x}')
 
     rtype, atype = self.t.args

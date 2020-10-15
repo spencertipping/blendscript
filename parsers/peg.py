@@ -26,8 +26,11 @@ def parser(f):
 def fail(e):  return (e, None)
 def ok(v, i): return (v, i)
 
-none  = parserify(lambda source, index: fail(None))
-empty = parserify(lambda source, index: ok(None, index))
+def none(source, index): return fail(None)
+def empty(source, index): return ok(None, index)
+
+parserify(none)
+parserify(empty)
 
 def lit(k):
   """

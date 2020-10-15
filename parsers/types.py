@@ -13,6 +13,7 @@ from ..compiler.types import *
 
 type_ops  = dsp()
 type_expr = whitespaced(type_ops)
+type_spec = alt(type_expr, const(t_dynamic, empty))
 
 type_ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
@@ -28,6 +29,9 @@ type_ops.add(**{
   'V4': const(t_vec4,    empty),
   'M3': const(t_mat33,   empty),
   'M4': const(t_mat44,   empty),
+
+  'B/obj':  const(t_blendobj,  empty),
+  'B/mesh': const(t_blendmesh, empty),
 
   '[]': pmap(t_list, type_expr),
   '->': pmaps(t_fn, seq(type_expr, type_expr))})

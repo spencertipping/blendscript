@@ -57,9 +57,4 @@ expr_ops.add(**{
   '\\': pmap(lambda ps: f'_fn(lambda {ps[0] or "_"}: {ps[1]})',
              seq(maybe(p_lword), expr)),
   '::': pmap(lambda ps: f'(lambda {ps[0]}: {ps[2]})({ps[1]})',
-             seq(p_lword, expr, expr)),
-
-
-  '.:': pmap(lambda ps: f'{ps[1]}.{ps[0]}', seq(p_word, expr)),
-  '.@': pmap(lambda ps: f'{ps[2]}.{ps[0]}(*{ps[1]})',
-             seq(p_word, expr, expr))})
+             seq(p_lword, expr, expr))})

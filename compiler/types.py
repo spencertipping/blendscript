@@ -7,171 +7,103 @@ with semantics.
 """
 
 
-# TODO
-# We need some pattern matching for this. Not a lot, but some. Otherwise we
-# won't be able to convert (-> i i) to i via the anything-to-: loophole.
-#
-# I think it's fine to just use _ in type conversions.
-#
-# Alternatively, each type constructor (function, atom, etc) should have its
-# own class that understands how to work with it.
-
-# TODO
-# Yep, each broad type class should be its own Python class. t_dynamic, for
-# example, should provide a passthrough convert_to().
-#
-# The binary relationship between from-types and to-types complicates this a
-# little.
-
-
-blendscript_type_conversions = {}
-"""
-A dictionary of {(fromtype, totype): lambda} values that transform blendscript
-vals between compile-time types. Define new ones with deftypeconv().
-"""
-
-blendscript_type_transitive_paths = {}
-"""
-A cache of solved transitive paths between types. If a direct pairing doesn't
-exist, BlendScript will search for an intermediate bridge type that it can
-convert through. If one is found, that bridge type is cached here.
-"""
-
-blendscript_all_types = set()
-
-
-def deftypeconv(fromtype, totype, f):
-  """
-  Defines a function that converts BlendScript values from "fromtype" to
-  "totype". "fromtype" and "totype" are just the "name" part of a
-  blendscript_type; the conversion function will receive the full type objects
-  as keyword arguments.
-
-  Conversion functions are called like this:
-
-  converted_value = f(original_value, fromtype=f, totype=t)
-
-  Both converted_value and original_value are Python code strings.
-  """
-  if (fromtype, totype) in blendscript_type_conversions: raise Exception(
-    f'a type conversion from {fromtype} to {totype} already exists')
-  blendscript_type_conversions[(fromtype, totype)] = f
-
-
-def transitive_conversion_bridge(fromtype, totype):
-  """
-  Attempts to find a bridge type for which (fromtype, bridge) and (bridge,
-  totype) are defined. If one is found, we return it and save it in
-  blendscript_type_transitive_paths; otherwise we return None.
-
-  If multiple bridges exist, one is chosen arbitrarily.
-  """
-  tk     = (fromtype, totype)
-  bridge = blendscript_type_transitive_paths.get(tk)
-  if bridge is not None: return bridge
-
-  for b in blendscript_all_types:
-    if (fromtype, b) in blendscript_type_conversions and \
-        (b, totype) in blendscript_type_conversions:
-      blendscript_type_transitive_paths[tk] = b
-      return b
-
-  return None
-
-
 class blendscript_type:
-  """
-  A data class used to represent BlendScript types as Python values.
-  BlendScript types are defined primarily by their conversion mechanics.
+  def upper_bound(self, t):
+    ...
 
-  Structurally, BlendScript types are encoded like S-expressions: a type name
-  with zero or more arguments, each of which is itself a BlendScript type.
+  def convert_value(self, t, v):
+    ...
+
+
+class atom_type(str, blendscript_type):
   """
-  def __init__(self, name, *args):
-    self.name = name
-    self.args = args
-    self.h    = hash((name, tuple(args)))
-    blendscript_all_types.add(self)
+  A concrete type of kind *.
+  """
+
+  atom_coercions = {}
+  """
+  A dictionary of (atom, atom) pairings defining valid coercion paths.
+  """
 
   def upper_bound(self, t):
-    """
-    Finds the upper coercion bound between this and another type.
-    """
-    return self      # FIXME: do this for real
+    return self
 
-  def convert_to(self, v, t):
-    """
-    Returns a **string of code** that converts "v" (also a string of code) from
-    this type to the blendscript type "t", or throws an error at compile-time
-    if the value cannot be converted.
-    """
-    if self == t or t == t_any or self == t_dynamic: return v
-
-    converter = blendscript_type_conversions.get((self, t))
-    if converter is not None:
-      return converter(v, fromtype=self, totype=t)
-
-    bridge = blendscript_type_transitive_paths.get((self, t))
-    if bridge is not None:
-      c1 = blendscript_type_conversions[(self, bridge)]
-      c2 = blendscript_type_conversions[(bridge, t)]
-      return c2(c1(v, self, bridge), bridge, t)
-
-    raise Exception(
-      f'blendscript_type: no converter or bridge between {self} and {t}')
-
-  def __str__(self):
-    """
-    A human-readable representation of this type, written in Polish notation
-    like everything else in BlendScript. So, you know, not entirely
-    human-readable.
-    """
-    if len(self.args):
-      return f'({self.name} {" ".join(map(str, self.args))})'
-    else:
-      return self.name
-
-  def __hash__(self): return self.h
-  def __eq__(self, v): return type(self) == type(v) and \
-                              self.h    == v.h      and \
-                              self.name == v.name   and \
-                              self.args == v.args
+  def convert_value(self, t, v):
+    # TODO: coercion or something
+    return v
 
 
-t_dynamic = blendscript_type('.')
-"""
-A value that can be manipulated with no coercions.
-"""
+class variable_type(str, blendscript_type):
+  """
+  An unknown type variable that collects coercion constraints.
+  """
 
-t_any = blendscript_type('_')
-"""
-A value that is never used. Everything can be coerced to this, but it cannot be
-coerced to anything.
-"""
+  def __init__(self, *args):
+    super(self, str).__init__(self, *args)
+    self.constraints = set()
 
-t_number = blendscript_type('n')
-t_string = blendscript_type('s')
-t_int    = blendscript_type('i')
-t_bool   = blendscript_type('b')
-t_vec2   = blendscript_type('v2')
-t_vec3   = blendscript_type('v3')
-t_vec4   = blendscript_type('v4')
-t_mat33  = blendscript_type('m33')
-t_mat44  = blendscript_type('m44')
+  def upper_bound(self, t): return self.solve().upper_bound(t)
 
-t_blendobj  = blendscript_type('b/obj')
-t_blendmesh = blendscript_type('b/mesh')
+  def convert_value(self, t, v):
+    self.constraints.add(('to', t))
+    # TODO: return a value that won't be defined until we solve the type
+    return v
+
+
+class dynamic_type(blendscript_type):
+  """
+  A type that is never coerced at compile-time; we assume any coercion happens
+  within the runtime environment.
+  """
+  def __init__(self): pass
+  def upper_bound(self, t): return self
+  def convert_value(self, t, v): return v
+  def __str__(self): return '.'
+
+
+class any_type(blendscript_type):
+  """
+  The _ wildcard type, which can never become constrained and whose values
+  cannot be inspected in any way.
+  """
+  def __init__(self): pass
+  def upper_bound(self, t): return self
+  def convert_value(self, t, v):
+    if t == self: return v
+    raise Exception(f'{v} :: _ cannot be converted to type {t}')
+  def __str__(self): return '_'
+
+
+t_any     = any_type()
+t_dynamic = dynamic_type()
+
+t_number = atom_type('N')
+t_string = atom_type('S')
+t_int    = atom_type('I')
+t_bool   = atom_type('B')
+t_vec2   = atom_type('V2')
+t_vec3   = atom_type('V3')
+t_vec4   = atom_type('V4')
+t_mat33  = atom_type('M33')
+t_mat44  = atom_type('M44')
+
+t_blendobj  = atom_type('B/obj')
+t_blendmesh = atom_type('B/mesh')
+
 
 def t_list(elem_type):
   """
   A homogeneous list of BlendScript values. Note that these will be represented
   by tuples in Python because lists are mutable and therefore not hashable.
   """
-  return blendscript_type('[]', elem_type)
+  # TODO
+  return t_dynamic
+
 
 def t_fn(rtype, atype):
   """
   A function with a specified return type and argument type. The return type
   is always represented first, as the thing the arrow points to.
   """
-  return blendscript_type('->', rtype, atype)
+  # TODO
+  return t_dynamic
