@@ -56,15 +56,15 @@ class dynamic_type(blendscript_type):
   within the runtime environment.
   """
   def __init__(self): pass
-  def upper_bound(self, t): return self
+  def upper_bound(self, t):      return t
   def convert_value(self, t, v): return v
-  def __str__(self): return '.'
+  def __str__(self):             return '.'
 
 
-class any_type(blendscript_type):
+class forall_type(blendscript_type):
   """
   The _ wildcard type, which can never become constrained and whose values
-  cannot be inspected in any way.
+  cannot be inspected in any way. This is a forall-quantified variable.
   """
   def __init__(self): pass
   def upper_bound(self, t): return self
@@ -74,7 +74,7 @@ class any_type(blendscript_type):
   def __str__(self): return '_'
 
 
-t_any     = any_type()
+t_forall  = forall_type()
 t_dynamic = dynamic_type()
 
 t_number = atom_type('N')

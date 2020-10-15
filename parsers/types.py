@@ -7,9 +7,12 @@ anywhere else where a type constraint might be necessary.
 
 from .peg   import *
 from .basic import *
+from .expr  import *
 
 from ..compiler.types import *
 
+
+type_expr = expr_grammar()
 
 type_ops  = dsp()
 type_expr = whitespaced(type_ops)
@@ -18,7 +21,7 @@ type_spec = alt(type_expr, const(t_dynamic, empty))
 type_ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
 
-  '_':  const(t_any,     empty),
+  '_':  const(t_forall,  empty),
   '.':  const(t_dynamic, empty),
   'I':  const(t_int,     empty),
   'B':  const(t_bool,    empty),

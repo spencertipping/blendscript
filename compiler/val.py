@@ -7,6 +7,8 @@ enough static type information that it can apply specific conversions before
 the resulting Python code is compiled.
 """
 
+from functools import reduce
+
 from .types import *
 
 class val:
@@ -44,7 +46,9 @@ class val:
   @classmethod
   def of(cls, t, v):
     """
-    Binds a global value and produces a val that refers to it.
+    Binds a global value and produces a val that refers to it. Note that this
+    global value lives forever, so don't go binding tons of these. If possible,
+    you should use val.lit() instead to drop a literal string into the code.
     """
     if v in cls.global_vals: return cls.global_vals[v]
     gs = f'_G{cls.gensym_id}'
@@ -57,7 +61,10 @@ class val:
   @classmethod
   def lit(cls, t, v):
     """
-    Returns a val that compiles to a literal.
+    Returns a val that compiles to a literal. No global references are created,
+    which means the value is free to be GC'd at the end of this function. (This
+    works because the value is serialized into the compiled output, not
+    referenced via the global gensym table.)
     """
     if eval(repr(v)) != v: raise Exception(
       f'{v} is not sufficiently serializable to use with val.lit()')
@@ -82,19 +89,20 @@ class val:
     return cls.of(t_fn(rt, at), f)
 
   @classmethod
-  def list(cls, t, *xs):
+  def list(cls, *xs):
     """
     Returns a val representing a homogeneous list of elements. This will be
-    compiled as a Python tuple.
+    compiled as a Python tuple. The type is inferred as the upper bound of all
+    member types.
     """
-    if len(xs) == 0: return cls(t_list(t), '()')
-
+    if len(xs) == 0: return cls(t_list(t_dynamic), '()')
+    ub = reduce(lambda x, y: x.upper_bound(y), (x.t for x in xs))
     ys = ['(']
     for x in xs:
-      ys.append(x.convert_to(t))
+      ys.append(x.convert_to(ub))
       ys.append(',')
     ys.append(')')
-    return cls(t_list(t), ys)
+    return cls(t_list(ub), ys)
 
   def __str__(self):
     l = []

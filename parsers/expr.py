@@ -1,6 +1,8 @@
 """
 BlendScript implements a Polish-notation calculator you can use to build vector
 and matrix expressions. The result is compiled into a Python function.
+
+This module defines the structure of all expression grammars.
 """
 
 from functools import reduce
@@ -32,8 +34,8 @@ class scope:
     self.parser   = whitespaced(alt(self.ops, self.literals, self.bindings))
     parserify(self)
 
-  def __call__(self, source, index):
-    return self.parser(source, index)
+  def __call__(self, s, i):
+    return self.parser(s, i)
 
   def bind(self, **bindings):
     for b, v in bindings.items():
@@ -41,54 +43,31 @@ class scope:
     return self
 
 
-expr_last_resort = alt()
-expr             = alt(expr_last_resort, scope())
-
-def scoped_expr(scope):
+class expr_grammar:
   """
-  Returns a parser that applies an additional scope layer while parsing its
-  next expression.
+  A lexically-scoped expression grammar with extensible ops, literals,
+  last-resort parsing, and scopes.
   """
-  def p(s, i):
-    expr.add(scope)
-    v, i2 = expr(s, i)
-    expr.pop()
-    return (v, i2)
-  return parserify(p)
+  def __init__(self):
+    self.last_resort = alt()
+    self.top_alt     = alt(self.last_resort, scope())
+    self.ops         = self.top_alt.last().ops
+    self.literals    = self.top_alt.last().literals
+    self.parser      = whitespaced(self.top_alt)
+    parserify(self)
 
+  def __call__(self, s, i):
+    return self.parser(s, i)
 
-unbound_name = alt(p_lword, re(r"'(\S+)"))
-let_binding = pflatmap(
-  pmaps(lambda n, v: scoped_expr(scope().bind(**{n: v})),
-        seq(unbound_name, expr)))
-
-expr_last_resort.add(let_binding)
-
-
-expr.last().literals.add(
-  pmap(val.float, p_float),
-  pmap(val.int,   p_int),
-  pmap(val.str,   re(r'"(\S*)')),
-
-  # Python expressions within {}
-  pmaps(val, iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
-
-
-def list_type(xs):
-  if len(xs) == 0: return t_dynamic
-  return reduce(lambda x, y: x.upper_bound(y), (x.t for x in xs))
-
-
-expr.last().ops.add(**{
-  '(': iseq(0, expr, lit(')')),
-
-  '[': pmap(lambda v: val.list(list_type(v), *v),
-            iseq(0, rep(iseq(0, expr, maybe(lit(',')))),
-                 whitespaced(lit(']')))),
-
-  '?':  pmaps(lambda x, y, z: x.__if__(y, z), rep(expr, min=3, max=3)),
-
-  '\\': pmap(lambda ps: f'_fn(lambda {ps[0] or "_"}: {ps[1]})',
-             seq(maybe(p_lword), expr)),
-  ':': pmap(lambda ps: f'(lambda {ps[0]}: {ps[2]})({ps[1]})',
-            seq(p_lword, expr, expr))})
+  def scoped_subexpression(self, scope):
+    """
+    Returns a parser that applies an additional scope layer while parsing its
+    next expression.
+    """
+    outer = self
+    def p(s, i):
+      outer.top_alt.add(scope)
+      v, i2 = outer(s, i)
+      outer.top_alt.pop()
+      return (v, i2)
+    return parserify(p)
