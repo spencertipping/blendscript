@@ -43,7 +43,7 @@ class val:
         if type(c) != val and type(c) != str:
           raise Exception(f'instantiating val with invalid code: {code}')
 
-    if not isinstance(t, blendscript_type):
+    if not isatype(t):
       raise Exception(f'instantiating val with invalid type: {t}')
 
     self.t    = t
@@ -55,7 +55,11 @@ class val:
     return f'{str(self) if self.ref is None else repr(self.ref)}{typestr}'
 
   def compile(self):
-    return eval(str(self), globals=val.bound_globals)
+    """
+    Compiles this value into a nullary lambda that will return the result when
+    invoked.
+    """
+    return eval('lambda: ' + str(self), val.bound_globals)
 
   @classmethod
   def of(cls, t, v):

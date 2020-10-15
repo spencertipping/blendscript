@@ -10,8 +10,10 @@ BlendScript is largely expression-driven and is parsed using combinatory PEG.
 """
 
 from time import time
+from sys  import stdin
 
-from .parsers import expr
+from .parsers.peg import pmap
+from .parsers.val import val_expr
 
 
 bl_info = {
@@ -30,10 +32,10 @@ def compile(source, debug=False):
   """
   t0 = time()
   if type(source) == str: source = source.encode()
-  f, i = expr.compiled_expr(source, 0)
-  if i is None: raise Exception(
+  f, i = pmap(lambda v: (v.t, v.compile()), val_expr)(source, 0)
+  if i is None: raise SyntaxError(
     f'blendscript.compile(): failed to parse {source}')
-  if i != len(source): raise Exception(
+  if i != len(source): raise SyntaxError(
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
   t1 = time()
 
@@ -43,11 +45,14 @@ def compile(source, debug=False):
   if debug: print(f"compiled blendscript to function: {f}")
   return f
 
+
 def run(source, **kwargs):
   """
   Runs the given source directly. This is a shorthand for compile(source)().
   """
-  return compile(source, **kwargs)()
+  ft, f = compile(source, **kwargs)
+  return (ft, f())
+
 
 def live(source, **kwargs):
   """
@@ -55,7 +60,35 @@ def live(source, **kwargs):
   Blender object management to make it easier to work with generated objects.
   """
   t0 = time()
-  r  = run(source, **kwargs)
+  r  = run(source, **kwargs)[1]
   t1 = time()
   print(f'blendscript: {int(1000 * (t1 - t0))}ms> {r}')
   return r
+
+
+def repl():
+  """
+  Runs a repl between stdin and stdout.
+  """
+  lines = []
+  while True:
+    try:
+      lines.append(input('>>> ' if len(lines) == 0 else '... '))
+      try:
+        t, v = run("".join(lines))
+        print(f'->  {v} :: {t}')
+        lines = []
+      except SyntaxError:
+        pass
+
+    except EOFError:
+      if len(lines):
+        print()
+        lines = []
+        continue
+      else:
+        print()
+        break
+
+    except InterruptedError:
+      lines = []

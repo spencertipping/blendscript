@@ -1,0 +1,2 @@
+import blendscript
+blendscript.repl()

@@ -4,4 +4,4 @@ cd "$(dirname "$0")"
 
 export PYTHONPATH="${PYTHONPATH:-}:$PWD/.."
 
-exec python3 -B
+exec python3 -B -m blendscript

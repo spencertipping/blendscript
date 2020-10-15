@@ -8,11 +8,17 @@ with semantics.
 
 
 class blendscript_type:
+  """
+  An abstract base class that all blendscript types extend from.
+  """
   def upper_bound(self, t):
     ...
 
   def convert_value(self, t, v):
     ...
+
+
+def isatype(x): return isinstance(x, blendscript_type)
 
 
 class atom_type(str, blendscript_type):
