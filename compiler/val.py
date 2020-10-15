@@ -11,6 +11,20 @@ from functools import reduce
 
 from .types import *
 
+
+def sanitize_identifier(s):
+  """
+  Quotes disallowed characters from identifier names, if any exist. Each
+  disallowed character is replaced with '_xx', where xx is its hex code.
+  """
+  import re
+  def hex_quote(m):
+    return ''.join(['_%02x' % ord(c) for c in m.group(0)])
+
+  non_ident = re.compile(r'^[^a-zA-Z_]|[^a-zA-Z0-9_]+')
+  return re.sub(non_ident, hex_quote, s)
+
+
 class val:
   """
   A BlendScript value produced by the specified code and having type t. code
@@ -68,8 +82,25 @@ class val:
     """
     if eval(repr(v)) != v: raise Exception(
       f'{v} is not sufficiently serializable to use with val.lit()')
-
     return cls(t, repr(v), ref=v)
+
+  @classmethod
+  def var_ref(cls, t, name):
+    """
+    Refers to a variable by its symbolic name. If the variable contains
+    characters that Python disallows, they are replaced by hex escapes.
+    """
+    return cls(t, sanitize_identifier(name))
+
+  @classmethod
+  def bind_var(cls, name, val, expr):
+    """
+    Wraps expr within a lexical context that binds name to val. name is
+    sanitized in a way that's consistent with var_ref, which you should use to
+    refer to it within expr.
+    """
+    return cls(expr.t, [f'(lambda {sanitize_identifier(name)}:', expr, ')',
+                        '(', val, ')'])
 
   @classmethod
   def int(cls, i): return cls.lit(t_int, int(i))

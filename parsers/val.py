@@ -16,7 +16,7 @@ from ..compiler.val import *
 val_expr = expr_grammar()
 
 val_expr.last_resort.add(
-  let_binding(val_expr, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
+  lambda_let_binding(val_expr, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
 
 val_expr.literals.add(
   pmap(val.float, p_float),
@@ -29,9 +29,9 @@ val_expr.literals.add(
 
 val_expr.ops.add(**{
   '(': iseq(0, val_expr, lit(')')),
-  '[': pmap(val.list, iseq(0,
-                           rep(iseq(0, val_expr, maybe(lit(',')))),
-                           whitespaced(lit(']')))),
+  '[': pmaps(val.list, iseq(0,
+                            rep(iseq(0, val_expr, maybe(lit(',')))),
+                            whitespaced(lit(']')))),
 
   '?':  pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_expr)),
 

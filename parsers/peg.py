@@ -105,14 +105,13 @@ class alt:
   """
   def __init__(self, *ps):
     self.ps = []
-    parserify(self)
     self.add(*ps)
+    parserify(self)
 
   def __call__(self, s, i):
     for p in reversed(self.ps):
       v, i2 = p(s, i)
-      if i2 is not None:
-        return (v, i2)
+      if i2 is not None: return (v, i2)
     return fail(None)
 
   def add(self, *ps):
@@ -136,8 +135,8 @@ class dsp:
   def __init__(self, **ps):
     self.ps = {}
     self.length_dicts = []
-    parserify(self)
     self.add(**ps)
+    parserify(self)
 
   def __call__(self, s, i):
     for l, d in self.length_dicts:

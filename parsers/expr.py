@@ -32,7 +32,7 @@ class scope:
     self.ops      = dsp()
     self.literals = alt()
     self.bindings = dsp()
-    self.parser   = modifier(alt(self.literals, self.ops, self.bindings))
+    self.parser   = modifier(alt(self.ops, self.literals, self.bindings))
     parserify(self)
 
   def __call__(self, s, i):
@@ -54,7 +54,8 @@ class expr_grammar:
     self.top_scope   = scope()
     self.ops         = self.top_scope.ops
     self.literals    = self.top_scope.literals
-    self.parser      = modifier(alt(self.last_resort, self.top_scope))
+    self.scopes      = alt(self.last_resort, self.top_scope)
+    self.parser      = modifier(self.scopes)
     parserify(self)
 
   def __call__(self, s, i):
@@ -67,8 +68,8 @@ class expr_grammar:
     """
     outer = self
     def p(s, i):
-      outer.top_alt.add(scope)
+      outer.scopes.add(scope)
       v, i2 = outer(s, i)
-      outer.top_alt.pop()
+      outer.scopes.pop()
       return (v, i2)
     return parserify(p)
