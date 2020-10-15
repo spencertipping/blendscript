@@ -1,11 +1,6 @@
 """
-BlendScript implements a Polish-notation calculator you can use to build vector
-and matrix expressions. The result is compiled into a Python function.
-
-This module defines the structure of all expression grammars.
+Expression grammars.
 """
-
-from functools import reduce
 
 from .peg import *
 
@@ -14,7 +9,11 @@ p_comment    = re(r'#\s+.*\n?')
 p_whitespace = re(r'\s+')
 p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
 
-def whitespaced(p): return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
+def whitespaced(p):
+  """
+  Wraps a parser with optional BlendScript whitespace.
+  """
+  return iseq(1, maybe(p_ignore), p, maybe(p_ignore))
 
 
 class scope:
@@ -33,7 +32,7 @@ class scope:
     self.ops      = dsp()
     self.literals = alt()
     self.bindings = dsp()
-    self.parser   = modifier(alt(self.ops, self.literals, self.bindings))
+    self.parser   = modifier(alt(self.literals, self.ops, self.bindings))
     parserify(self)
 
   def __call__(self, s, i):
@@ -48,14 +47,14 @@ class scope:
 class expr_grammar:
   """
   A lexically-scoped expression grammar with extensible ops, literals,
-  last-resort parsing, and scopes.
+  last-resort parsing, and a stack of scopes.
   """
   def __init__(self, modifier=whitespaced):
     self.last_resort = alt()
-    self.top_alt     = alt(self.last_resort, scope())
-    self.ops         = self.top_alt.last().ops
-    self.literals    = self.top_alt.last().literals
-    self.parser      = modifier(self.top_alt)
+    self.top_scope   = scope()
+    self.ops         = self.top_scope.ops
+    self.literals    = self.top_scope.literals
+    self.parser      = modifier(alt(self.last_resort, self.top_scope))
     parserify(self)
 
   def __call__(self, s, i):

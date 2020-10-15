@@ -5,12 +5,14 @@ Basic building blocks for grammars.
 from .peg  import *
 from .expr import *
 
+
 p_word  = re(r'[A-Za-z][A-Za-z0-9_\.]*')
 p_lword = re(r'[a-z][A-Za-z0-9_\.]*')
 
 p_int   = pmap(int,   re(r'-?\d+'))
 p_float = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
                          r'-?\d+\.(?:\d*)?(?:[eE][-+]?\d+)?'))
+
 
 def let_binding(unbound_name, expr):
   """
