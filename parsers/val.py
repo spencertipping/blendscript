@@ -9,11 +9,14 @@ from .basic import *
 from .expr  import *
 from .types import *
 
+from ..compiler.val import *
+
+
 val_expr = expr_grammar()
 
-unbound_name = alt(p_lword, re(r"'(\S+)"))
-
-val_expr.last_resort.add(let_binding)
+val_expr.last_resort.add(
+  let_binding(val_expr,
+              alt(p_lword, re(r"'(\S+)"))))
 
 val_expr.literals.add(
   pmap(val.float, p_float),

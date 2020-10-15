@@ -14,11 +14,7 @@ from ..compiler.types import *
 
 type_expr = expr_grammar()
 
-type_ops  = dsp()
-type_expr = whitespaced(type_ops)
-type_spec = alt(type_expr, const(t_dynamic, empty))
-
-type_ops.add(**{
+type_expr.ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
 
   '_':  const(t_forall,  empty),
