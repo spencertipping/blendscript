@@ -42,7 +42,7 @@ class scope:
 
 
 expr_last_resort = alt()
-expr = alt(expr_last_resort, scope())
+expr             = alt(expr_last_resort, scope())
 
 def scoped_expr(scope):
   """
@@ -57,7 +57,7 @@ def scoped_expr(scope):
   return parserify(p)
 
 
-unbound_name = p_lword
+unbound_name = alt(p_lword, re(r"'(\S+)"))
 let_binding = pflatmap(
   pmaps(lambda n, v: scoped_expr(scope().bind(**{n: v})),
         seq(unbound_name, expr)))
@@ -68,11 +68,10 @@ expr_last_resort.add(let_binding)
 expr.last().literals.add(
   pmap(val.float, p_float),
   pmap(val.int,   p_int),
-  pmap(val.str,   iseq(1, re(r"'"), p_word)),
+  pmap(val.str,   re(r'"(\S*)')),
 
   # Python expressions within {}
-  pmaps(lambda v, t, _: val(t, v),
-        iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
+  pmaps(val, iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
 
 def list_type(xs):
