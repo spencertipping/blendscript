@@ -12,12 +12,12 @@ from .expr  import *
 from ..compiler.types import *
 
 
+# TODO: rewrite this
 type_expr = expr_grammar()
 
 type_expr.ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
 
-  '_':  const(t_forall,  empty),
   '.':  const(t_dynamic, empty),
   'I':  const(t_int,     empty),
   'B':  const(t_bool,    empty),

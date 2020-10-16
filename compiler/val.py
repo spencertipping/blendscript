@@ -130,14 +130,14 @@ class val:
     compiled as a Python tuple. The type is inferred as the upper bound of all
     member types.
     """
-    if len(xs) == 0: return cls(t_list(t_dynamic), '()')
-    ub = reduce(lambda x, y: x.upper_bound(y), (x.t for x in xs))
+    t  = typevar()
     ys = ['(']
     for x in xs:
-      ys.append(x.convert_to(ub))
+      x.t.unify_with(t)
+      ys.append(x)
       ys.append(',')
     ys.append(')')
-    return cls(t_list(ub), ys)
+    return cls(t_list(t), ys)
 
   def __str__(self):
     l = []
@@ -153,25 +153,17 @@ class val:
         else:              c.str_into(l)
     return self
 
-  def convert_to(self, t):
-    if t == self.t: return self
-    return self.t.convert_value(t, self)
-
   def __call__(self, x):
     """
     Coerce the argument into the required type, then apply the function and
     reduce to the return type.
     """
+    r = self.t.return_type()
+    a = self.t.arg_type()
+    if r is None: raise Exception(f'cannot call non-function {self} on {x}')
 
-    # TODO: check for coercibility into a function type; don't rely on the type
-    # name literally like we do here
-    if self.t.is_callable():
-
-
-      raise Exception(f'cannot call non-function {self} on {x}')
-
-
-    return val(rtype, [self, '(', x, ')'])
+    x.t.unify_with(a)
+    return val(r, [self, '(', x, ')'])
 
   def __if__(self, t, f):
     """

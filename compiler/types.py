@@ -11,14 +11,24 @@ fromList, etc, but it won't search for type-unique functions nor will it form
 automatic composition bridges.
 """
 
+from enum import Enum
+
 
 class blendscript_type:
   """
   An abstract base class that all blendscript types extend from.
+
+  TODO: replace type_arity() with curried kind structures
   """
-  def arity(self): ...
+  def type_arity(self): ...
+  def value_arity(self): ...
   def is_value_type(self): ...
+  def arg_type(self): ...
   def return_type(self): ...
+
+  def unify_with(self, t):
+    # TODO: HM stuff
+    pass
 
   def __call__(self, *args):
     t = self
@@ -30,49 +40,50 @@ class blendscript_type:
 def isatype(x): return isinstance(x, blendscript_type)
 
 
-class atom_type(blendscript_type):
+class atom_type(str, blendscript_type):
   """
-  A single type whose kind arity is fixed.
-
-  TODO: specify the kind-signature of higher-kinded atom type arguments
-
-  TODO: convert to curried representation
+  A single concrete type whose kind is *.
   """
-  def __init__(self, name, kind_arity=0):
-    self.name       = name
-    self.kind_arity = kind_arity
-
-  def arity(self):         return self.kind_arity
-  def is_value_type(self): return self.kind_arity == 0
+  def type_arity(self):    return 0
+  def value_arity(self):   return 0
+  def is_value_type(self): return True
+  def arg_type(self):      return None
   def return_type(self):   return None
 
-  def __str__(self):  return f'{self.name} :: *{" -> *" * self.kind_arity}'
-  def __hash__(self): return hash((self.name, self.kind_arity))
+
+class higher_kinded_type(blendscript_type):
+  """
+  A higher-kinded type.
+  """
+  def __init__(self, name, a, r):
+    self.name = name
+    self.a    = a
+    self.r    = r
+
+  def type_arity(self):    return 1 + self.r.type_arity()
+  def is_value_type(self): return False
+  def arg_type(self):      return None
+  def return_type(self):   return None
+
+  def __str__(self):  return f'{self.name} :: ({self.a} -> {self.r})'
+  def __hash__(self): return hash((self.name, self.a, self.r))
   def __eq__(self, t):
-    return isinstance(t, atom_type) \
-      and  (self.name, self.kind_arity) == (t.name, t.kind_arity)
+    return isinstance(t, higher_kinded_type) \
+      and  (self.name, self.a, self.r) == (t.name, t.a, t.r)
 
 
 class dynamic_type(blendscript_type):
   """
-  A type that satisfies every type constraint.
+  A type that satisfies every type constraint. If addressed as a function, its
+  arity is unbounded -- represented by -1.
   """
   def __init__(self):      pass
-  def arity(self):         return -1
+  def type_arity(self):    return 0
+  def value_arity(self):   return -1
   def is_value_type(self): return True
+  def arg_type(self):      return t_dynamic
   def return_type(self):   return t_dynamic
   def __str__(self):       return '.'
-
-
-class forall_type(blendscript_type):
-  """
-  The _ wildcard type, which satisfies no type constraint.
-  """
-  def __init__(self):      pass
-  def arity(self):         return 0
-  def is_value_type(self): return True
-  def return_type(self):   return None
-  def __str__(self):       return '_'
 
 
 class apply_type(blendscript_type):
@@ -80,17 +91,24 @@ class apply_type(blendscript_type):
   A higher-kinded type name applied to an argument.
   """
   def __init__(self, head, arg):
-    if head.arity() is None: raise Exception(
+    if head.type_arity() is None: raise Exception(
         f'{head} cannot be applied to {arg} (not a concrete type)')
 
-    if head.arity() == 0: raise Exception(
+    if head.type_arity() == 0: raise Exception(
         f'{head} cannot be applied to {arg} (too many type arguments)')
 
     self.head = head
     self.arg  = arg
 
-  def arity(self):         return self.head.arity() - 1
+  def type_arity(self):    return self.head.type_arity() - 1
   def is_value_type(self): return self.arity() <= 0
+
+  def arg_type(self):
+    if isinstance(self.head, apply_type) and self.head.head == t_fn:
+      return self.head.arg
+    else:
+      return None
+
   def return_type(self):
     if isinstance(self.head, apply_type) and self.head.head == t_fn:
       return self.arg
@@ -109,11 +127,15 @@ class apply_type(blendscript_type):
       return f'{self.head} {self.arg}'
 
 
-t_forall  = forall_type()
-t_dynamic = dynamic_type()
+def typevar():
+  # TODO
+  return t_dynamic
 
-t_fn   = atom_type('->', 2)
-t_list = atom_type('[]', 1)
+
+t_dynamic = dynamic_type()
+t_functor = higher_kinded_type('->', '*', t_dynamic)
+t_fn      = higher_kinded_type('->', '*', t_functor)
+t_list    = atom_type('[]', 1)
 
 t_number = atom_type('N')
 t_string = atom_type('S')
