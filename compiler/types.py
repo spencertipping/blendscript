@@ -17,24 +17,14 @@ from enum import Enum
 class blendscript_type:
   """
   An abstract base class that all blendscript types extend from.
-
-  TODO: replace type_arity() with curried kind structures
   """
-  def type_arity(self): ...
-  def value_arity(self): ...
-  def is_value_type(self): ...
-  def arg_type(self): ...
-  def return_type(self): ...
+  def arg_type(self):    return None
+  def return_type(self): return None
+  def value_arity(self): return 0
 
   def unify_with(self, t):
     # TODO: HM stuff
     pass
-
-  def __call__(self, *args):
-    t = self
-    for a in args:
-      t = apply_type(t, a)
-    return t
 
 
 def isatype(x): return isinstance(x, blendscript_type)
@@ -44,32 +34,6 @@ class atom_type(str, blendscript_type):
   """
   A single concrete type whose kind is *.
   """
-  def type_arity(self):    return 0
-  def value_arity(self):   return 0
-  def is_value_type(self): return True
-  def arg_type(self):      return None
-  def return_type(self):   return None
-
-
-class higher_kinded_type(blendscript_type):
-  """
-  A higher-kinded type.
-  """
-  def __init__(self, name, a, r):
-    self.name = name
-    self.a    = a
-    self.r    = r
-
-  def type_arity(self):    return 1 + self.r.type_arity()
-  def is_value_type(self): return False
-  def arg_type(self):      return None
-  def return_type(self):   return None
-
-  def __str__(self):  return f'{self.name} :: ({self.a} -> {self.r})'
-  def __hash__(self): return hash((self.name, self.a, self.r))
-  def __eq__(self, t):
-    return isinstance(t, higher_kinded_type) \
-      and  (self.name, self.a, self.r) == (t.name, t.a, t.r)
 
 
 class dynamic_type(blendscript_type):
@@ -77,54 +41,42 @@ class dynamic_type(blendscript_type):
   A type that satisfies every type constraint. If addressed as a function, its
   arity is unbounded -- represented by -1.
   """
-  def __init__(self):      pass
-  def type_arity(self):    return 0
   def value_arity(self):   return -1
-  def is_value_type(self): return True
   def arg_type(self):      return t_dynamic
   def return_type(self):   return t_dynamic
   def __str__(self):       return '.'
 
 
-class apply_type(blendscript_type):
+class unary_type(blendscript_type):
   """
-  A higher-kinded type name applied to an argument.
+  A type whose kind is (* -> *), applied to a single type argument.
   """
-  def __init__(self, head, arg):
-    if head.type_arity() is None: raise Exception(
-        f'{head} cannot be applied to {arg} (not a concrete type)')
+  def __init__(self, name, a):
+    self.name = name
+    self.a    = a
 
-    if head.type_arity() == 0: raise Exception(
-        f'{head} cannot be applied to {arg} (too many type arguments)')
-
-    self.head = head
-    self.arg  = arg
-
-  def type_arity(self):    return self.head.type_arity() - 1
-  def is_value_type(self): return self.arity() <= 0
-
-  def arg_type(self):
-    if isinstance(self.head, apply_type) and self.head.head == t_fn:
-      return self.head.arg
-    else:
-      return None
-
-  def return_type(self):
-    if isinstance(self.head, apply_type) and self.head.head == t_fn:
-      return self.arg
-    else:
-      return None
-
-  def __hash__(self): return hash((self.head, self.arg))
+  def __str__(self): return f'({self.name} {self.a})'
+  def __hash__(self): return hash((self.name, self.a))
   def __eq__(self, t):
-    return isinstance(t, apply_type) \
-      and  (self.head, self.arg) == (t.head, t.arg)
+    return isinstance(t, unary_type) and (self.name, self.a) == (t.name, t.a)
 
-  def __str__(self):
-    if isinstance(self.head, apply_type):
-      return f'({self.head}) {self.arg}'
-    else:
-      return f'{self.head} {self.arg}'
+
+class fn_type(blendscript_type):
+  """
+  A function whose argument and return types are specified.
+  """
+  def __init__(self, a, r):
+    self.a = a
+    self.r = r
+
+  def value_arity(self): return 1 + self.r.value_arity()
+  def arg_type(self):    return self.a
+  def return_type(self): return self.r
+
+  def __str__(self): return f'({self.a} -> {self.r})'
+  def __hash__(self): return hash((self.a, self.r))
+  def __eq__(self, t):
+    return isinstance(t, fn_type) and (self.a, self.r) == (t.a, r.r)
 
 
 def typevar():
@@ -132,10 +84,13 @@ def typevar():
   return t_dynamic
 
 
+def list_type(t): return unary_type('[]', t)
+
+
 t_dynamic = dynamic_type()
-t_functor = higher_kinded_type('->', '*', t_dynamic)
-t_fn      = higher_kinded_type('->', '*', t_functor)
-t_list    = atom_type('[]', 1)
+
+t_list    = list_type
+t_fn      = fn_type
 
 t_number = atom_type('N')
 t_string = atom_type('S')
