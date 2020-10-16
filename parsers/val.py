@@ -33,7 +33,7 @@ val_expr.ops.add(**{
                             rep(iseq(0, val_expr, maybe(lit(',')))),
                             whitespaced(lit(']')))),
 
-  '?':  pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_expr)),
+  '?': pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_expr)),
 
   # TODO: rewrite these
   '\\': pmap(lambda ps: f'_fn(lambda {ps[0] or "_"}: {ps[1]})',

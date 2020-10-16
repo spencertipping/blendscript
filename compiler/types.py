@@ -4,6 +4,11 @@ BlendScript type system.
 BlendScript value types are more about places those values can be used, not
 what those values are made of. Python takes care of structure and we pick up
 with semantics.
+
+I want BlendScript to use Hindley-Milner and typeclasses with implicit coercion
+pathways. Haskell does this in a few places with things like fromIntegral,
+fromList, etc, but it won't search for type-unique functions nor will it form
+automatic composition bridges.
 """
 
 
@@ -11,77 +16,84 @@ class blendscript_type:
   """
   An abstract base class that all blendscript types extend from.
   """
-  def upper_bound(self, t):
-    ...
+  def arity(self): ...
 
-  def convert_value(self, t, v):
-    ...
+  def __call__(self, *args):
+    t = self
+    for a in args:
+      t = apply_type(t, a)
+    return t
 
 
 def isatype(x): return isinstance(x, blendscript_type)
 
 
-class atom_type(str, blendscript_type):
+class atom_type(blendscript_type):
   """
-  A concrete type of kind *.
+  A single type whose kind arity is fixed.
   """
+  def __init__(self, name, kind_arity=0):
+    self.name       = name
+    self.kind_arity = kind_arity
 
-  atom_coercions = {}
-  """
-  A dictionary of (atom, atom) pairings defining valid coercion paths.
-  """
-
-  def upper_bound(self, t):
-    return self
-
-  def convert_value(self, t, v):
-    # TODO: coercion or something
-    return v
-
-
-class variable_type(str, blendscript_type):
-  """
-  An unknown type variable that collects coercion constraints.
-  """
-
-  def __init__(self, *args):
-    super(self, str).__init__(self, *args)
-    self.constraints = set()
-
-  def upper_bound(self, t): return self.solve().upper_bound(t)
-
-  def convert_value(self, t, v):
-    self.constraints.add(('to', t))
-    # TODO: return a value that won't be defined until we solve the type
-    return v
+  def arity(self):    return self.kind_arity
+  def __str__(self):  return f'{self.name} :: *{" -> *" * self.kind_arity}'
+  def __hash__(self): return hash((self.name, self.kind_arity))
+  def __eq__(self, t):
+    return isinstance(t, atom_type) \
+      and  (self.name, self.kind_arity) == (t.name, t.kind_arity)
 
 
 class dynamic_type(blendscript_type):
   """
-  A type that is never coerced at compile-time; we assume any coercion happens
-  within the runtime environment.
+  A type that satisfies every type constraint.
   """
   def __init__(self): pass
-  def upper_bound(self, t):      return t
-  def convert_value(self, t, v): return v
-  def __str__(self):             return '.'
+  def arity(self):    return -1
+  def __str__(self):  return '.'
 
 
 class forall_type(blendscript_type):
   """
-  The _ wildcard type, which can never become constrained and whose values
-  cannot be inspected in any way. This is a forall-quantified variable.
+  The _ wildcard type, which satisfies no type constraint.
   """
   def __init__(self): pass
-  def upper_bound(self, t): return self
-  def convert_value(self, t, v):
-    if t == self: return v
-    raise Exception(f'{v} :: _ cannot be converted to type {t}')
-  def __str__(self): return '_'
+  def arity(self):    return None
+  def __str__(self):  return '_'
+
+
+class apply_type(blendscript_type):
+  """
+  A higher-kinded type name applied to an argument.
+  """
+  def __init__(self, head, arg):
+    if head.arity() is None: raise Exception(
+        f'{head} cannot be applied to {arg} (not a concrete type)')
+
+    if head.arity() == 0: raise Exception(
+        f'{head} cannot be applied to {arg} (too many type arguments)')
+
+    self.head = head
+    self.arg  = arg
+
+  def arity(self):    return self.head.arity() - 1
+  def __hash__(self): return hash((self.head, self.arg))
+  def __eq__(self, t):
+    return isinstance(t, apply_type) \
+      and  (self.head, self.arg) == (t.head, t.arg)
+
+  def __str__(self):
+    if isinstance(self.head, apply_type):
+      return f'({self.head}) {self.arg}'
+    else:
+      return f'{self.head} {self.arg}'
 
 
 t_forall  = forall_type()
 t_dynamic = dynamic_type()
+
+t_fn   = atom_type('->', 2)
+t_list = atom_type('[]', 1)
 
 t_number = atom_type('N')
 t_string = atom_type('S')
@@ -95,21 +107,3 @@ t_mat44  = atom_type('M44')
 
 t_blendobj  = atom_type('B/obj')
 t_blendmesh = atom_type('B/mesh')
-
-
-def t_list(elem_type):
-  """
-  A homogeneous list of BlendScript values. Note that these will be represented
-  by tuples in Python because lists are mutable and therefore not hashable.
-  """
-  # TODO
-  return t_dynamic
-
-
-def t_fn(rtype, atype):
-  """
-  A function with a specified return type and argument type. The return type
-  is always represented first, as the thing the arrow points to.
-  """
-  # TODO
-  return t_dynamic
