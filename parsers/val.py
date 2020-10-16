@@ -15,42 +15,20 @@ from ..compiler.val import *
 
 val_atom = expr_grammar()
 
-def apply_series(xs):
+def associate_fncalls(xs):
   """
-  Walks forwards through a series of values that have been juxtaposed, e.g.
-  "f x y z 3", and infers sub-applications based on function arity saturation
-  when possible. If no such type information is available, for instance because
-  all values have dynamic type, then the sequence is interpreted as it would be
-  in Haskell: left-associative function application.
-
-  apply_series is perhaps better understood as trying to infer parentheses
-  based on type information. The goal is to make it possible to omit parens in
-  common cases; for example, "* 4 + 5 6" -- we obviously don't intend to
-  multiply "4" by "+" and then have "5" and "6" be extra values. Instead, we
-  should use the type information we have about "+" and "*" to infer that we
-  meant "* 4 (+ 5 6)".
-
-  We don't have any concept of precedence in this language. Everything comes
-  down to types and argument compatibility. Here's how this works.
-
-  First, we do nothing unless the arguments oversaturate the function -- i.e.
-  net saturation is positive. If that's the case:
-
-  1. If the current argument can't be applied to anything, then
+  Looks holistically at a series of terms placed next to each other and finds a
+  way to associate those terms such that no function is overapplied. Normally
+  function application associates leftward in curried languages, but we want to
+  modify that when it's clear that leftward association wasn't what the user
+  intended. For example, "+ 1 * 2 3" should be understood as ((+ 1) ((* 2) 3)),
+  not ((((+ 1) *) 2) 3). We understand it this way because (+) has arity 2 --
+  that means it can't be applied to four arguments.
   """
-  vs = [xs[0]]
-  for x in xs[1:]:
+  ...
 
-    pass
 
-  # Fold up deferred calls
-  while len(vs) > 1:
-    v = vs.pop()
-    vs[-1] = vs[-1](v)
-
-  return v
-
-val_expr = pmap(apply_series, plus(val_atom))
+val_expr = pmap(associate_fncalls, plus(val_atom))
 
 
 val_atom.last_resort.add(
