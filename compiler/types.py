@@ -17,6 +17,8 @@ class blendscript_type:
   An abstract base class that all blendscript types extend from.
   """
   def arity(self): ...
+  def is_value_type(self): ...
+  def return_type(self): ...
 
   def __call__(self, *args):
     t = self
@@ -31,12 +33,19 @@ def isatype(x): return isinstance(x, blendscript_type)
 class atom_type(blendscript_type):
   """
   A single type whose kind arity is fixed.
+
+  TODO: specify the kind-signature of higher-kinded atom type arguments
+
+  TODO: convert to curried representation
   """
   def __init__(self, name, kind_arity=0):
     self.name       = name
     self.kind_arity = kind_arity
 
-  def arity(self):    return self.kind_arity
+  def arity(self):         return self.kind_arity
+  def is_value_type(self): return self.kind_arity == 0
+  def return_type(self):   return None
+
   def __str__(self):  return f'{self.name} :: *{" -> *" * self.kind_arity}'
   def __hash__(self): return hash((self.name, self.kind_arity))
   def __eq__(self, t):
@@ -48,18 +57,22 @@ class dynamic_type(blendscript_type):
   """
   A type that satisfies every type constraint.
   """
-  def __init__(self): pass
-  def arity(self):    return -1
-  def __str__(self):  return '.'
+  def __init__(self):      pass
+  def arity(self):         return -1
+  def is_value_type(self): return True
+  def return_type(self):   return t_dynamic
+  def __str__(self):       return '.'
 
 
 class forall_type(blendscript_type):
   """
   The _ wildcard type, which satisfies no type constraint.
   """
-  def __init__(self): pass
-  def arity(self):    return None
-  def __str__(self):  return '_'
+  def __init__(self):      pass
+  def arity(self):         return 0
+  def is_value_type(self): return True
+  def return_type(self):   return None
+  def __str__(self):       return '_'
 
 
 class apply_type(blendscript_type):
@@ -76,7 +89,14 @@ class apply_type(blendscript_type):
     self.head = head
     self.arg  = arg
 
-  def arity(self):    return self.head.arity() - 1
+  def arity(self):         return self.head.arity() - 1
+  def is_value_type(self): return self.arity() <= 0
+  def return_type(self):
+    if isinstance(self.head, apply_type) and self.head.head == t_fn:
+      return self.arg
+    else:
+      return None
+
   def __hash__(self): return hash((self.head, self.arg))
   def __eq__(self, t):
     return isinstance(t, apply_type) \

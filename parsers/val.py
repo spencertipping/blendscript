@@ -13,12 +13,20 @@ from .types import *
 from ..compiler.val import *
 
 
-val_expr = expr_grammar()
+val_atom = expr_grammar()
 
-val_expr.last_resort.add(
-  lambda_let_binding(val_expr, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
+val = alt()
+val.add(iseq(1, lit('('), val, lit(')')))
 
-val_expr.literals.add(
+val_applied = pmap(
+  ...,
+  plus(val_atom)
+)
+
+val_atom.last_resort.add(
+  lambda_let_binding(val_atom, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
+
+val_atom.literals.add(
   pmap(val.float, p_float),
   pmap(val.int,   p_int),
   pmap(val.str,   re(r'"([^\s()\[\]{}]*)')),
@@ -27,16 +35,9 @@ val_expr.literals.add(
   pmaps(lambda t, v: val(t, f'({v})'),
         iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
-val_expr.ops.add(**{
-  '(': iseq(0, val_expr, lit(')')),
+val_atom.ops.add(**{
   '[': pmaps(val.list, iseq(0,
-                            rep(iseq(0, val_expr, maybe(lit(',')))),
+                            rep(iseq(0, val, maybe(lit(',')))),
                             whitespaced(lit(']')))),
 
-  '?': pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_expr)),
-
-  # TODO: rewrite these
-  '\\': pmap(lambda ps: f'_fn(lambda {ps[0] or "_"}: {ps[1]})',
-             seq(maybe(p_lword), val_expr)),
-  ':': pmap(lambda ps: f'(lambda {ps[0]}: {ps[2]})({ps[1]})',
-            seq(p_lword, val_expr, val_expr))})
+  '?': pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_atom))})

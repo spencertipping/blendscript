@@ -162,17 +162,21 @@ class val:
     Coerce the argument into the required type, then apply the function and
     reduce to the return type.
     """
-    if self.t != t_dynamic and self.t.name != '->':
+
+    # TODO: check for coercibility into a function type; don't rely on the type
+    # name literally like we do here
+    if self.t.is_callable():
+
+
       raise Exception(f'cannot call non-function {self} on {x}')
 
-    rtype, atype = self.t.args
-    return val(rtype, [self, '(', x.convert_to(atype), ')'])
+
+    return val(rtype, [self, '(', x, ')'])
 
   def __if__(self, t, f):
     """
-    Create a ternary expression, typed as the upper bound of both branch types.
+    Create a ternary expression.
     """
-    ub = t.t.upper_bound(f.t)
-    return val(ub, ['(', t.convert_to(ub),
-                    ' if ', self.convert_to(t_bool),
-                    ' else ', f.convert_to(ub), ')'])
+    return val(t_dynamic, ['(', t,
+                           ' if ', self,
+                           ' else ', f, ')'])
