@@ -168,8 +168,8 @@ class val:
     Coerce the argument into the required type, then apply the function and
     reduce to the return type.
     """
-    r = self.t.return_type()
     a = self.t.arg_type()
+    r = self.t.return_type()
     if r is None: raise Exception(f'cannot call non-function {self} on {x}')
 
     x.t.unify_with(a)

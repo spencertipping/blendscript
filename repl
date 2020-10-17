@@ -4,6 +4,10 @@ cd "$(dirname "$0")"
 
 export PYTHONPATH="${PYTHONPATH:-}:$PWD/.."
 
+if [[ ${1:-} == -c ]]; then
+  exec python3 -B -m blendscript <<<"$2"
+fi
+
 if which rlwrap >&/dev/null; then
   exec rlwrap -H ~/.blendscript-repl-history python3 -B -m blendscript
 else
