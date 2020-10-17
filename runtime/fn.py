@@ -36,4 +36,4 @@ class fn:
 
   def __matmul__(self, g): return compose(self.f, g)
 
-  def __str__(self): return self.source
+  def __str__(self): return self.source or str(self.f)

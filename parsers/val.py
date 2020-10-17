@@ -11,6 +11,7 @@ from .expr  import *
 from .types import *
 
 from ..compiler.val import *
+from ..runtime.fn   import fn
 
 
 val_atom = expr_grammar()
@@ -59,11 +60,12 @@ def associate_fncalls(xs):
   return vs[-1]
 
 
-val_expr = pmap(associate_fncalls, plus(val_atom))
+def add_fncalls(atom): return pmap(associate_fncalls, plus(atom))
+val_expr = add_fncalls(val_atom)
 
 
 val_atom.last_resort.add(
-  lambda_let_binding(val_atom, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
+  lambda_let_binding(val_atom, add_fncalls, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
 
 val_atom.literals.add(
   iseq(1, lit('('), val_expr, lit(')')),
@@ -81,14 +83,9 @@ val_atom.ops.add(**{
                             rep(iseq(0, val_expr, maybe(lit(',')))),
                             whitespaced(lit(']')))),
 
+  '\\': pflatmap(
+    pmaps(lambda an, at: lambda_parser(val_atom, add_fncalls,
+                                       an or "_", at or typevar()),
+          seq(maybe(p_varname), maybe(type_expr)))),
+
   '?': pmaps(lambda x, y, z: x.__if__(y, z), exactly(3, val_atom))})
-
-
-unop_type  = fn_type(t_dynamic, t_dynamic)
-binop_type = fn_type(t_dynamic, unop_type)
-
-val_atom.top_scope.bind(**{
-  '+': val.of(binop_type, lambda x: lambda y: x + y),
-  '*': val.of(binop_type, lambda x: lambda y: x * y),
-  '-': val.of(unop_type,  lambda x: -x),
-  '/': val.of(unop_type,  lambda x: 1 / x)})

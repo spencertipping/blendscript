@@ -61,6 +61,13 @@ class expr_grammar:
   def __call__(self, s, i):
     return self.parser(s, i)
 
+  def bind(self, **bindings):
+    """
+    Binds new values within the innermost scope.
+    """
+    self.scopes.last().bind(**bindings)
+    return self
+
   def scoped_subexpression(self, scope):
     """
     Returns a parser that applies an additional scope layer while parsing its

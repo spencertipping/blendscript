@@ -79,17 +79,20 @@ class fn_type(blendscript_type):
     return isinstance(t, fn_type) and (self.a, self.r) == (t.a, r.r)
 
 
+def with_typevar(f): return f(typevar())
 def typevar():
   # TODO
   return t_dynamic
 
 
 def list_type(t): return unary_type('[]', t)
+def set_type(t):  return unary_type('{}', t)
 
 
 t_dynamic = dynamic_type()
 
 t_list    = list_type
+t_set     = set_type
 t_fn      = fn_type
 
 t_number = atom_type('N')

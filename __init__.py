@@ -9,11 +9,15 @@ towards CAD, engineering, and precision editing.
 BlendScript is largely expression-driven and is parsed using combinatory PEG.
 """
 
+import traceback
 from time import time
 from sys  import stdin
 
 from .parsers.peg import pmap
 from .parsers.val import val_expr
+
+from .runtime.val         import *
+from .runtime.blendermath import *
 
 
 bl_info = {
@@ -83,6 +87,10 @@ def repl():
       except SyntaxError:
         # Assume we're collecting more lines of input
         pass
+      except Exception as e:
+        print(f'error: {e}')
+        print(traceback.format_exc())
+        lines = []
 
     except EOFError:
       if len(lines):

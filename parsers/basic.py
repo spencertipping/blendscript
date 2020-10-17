@@ -11,12 +11,16 @@ from ..compiler.val import *
 p_word  = re(r'[A-Za-z][A-Za-z0-9_\.]*')
 p_lword = re(r'[a-z][A-Za-z0-9_\.]*')
 
+p_varname = re(r'[a-z][a-z0-9_]*')
+
 p_int   = pmap(int,   re(r'-?\d+'))
 p_float = pmap(float, re(r'-?\d*\.\d(?:\d*(?:[eE][-+]?\d+)?)?',
                          r'-?\d+\.(?:\d*)?(?:[eE][-+]?\d+)?'))
 
+p_number = alt(p_float, p_int)
 
-def rewrite_let_binding(expr, unbound_name):
+
+def rewrite_let_binding(expr, modifier, unbound_name):
   """
   Parse-time let binding and rewriting.
 
@@ -24,11 +28,12 @@ def rewrite_let_binding(expr, unbound_name):
   expression. For a lambda expression, use lambda_let_binding.
   """
   return pflatmap(
-    pmaps(lambda n, v: expr.scoped_subexpression(scope().bind(**{n: v})),
-          seq(unbound_name, expr)))
+    pmaps(
+      lambda n, v: modifier(expr.scoped_subexpression(scope().bind(**{n: v}))),
+      seq(unbound_name, expr)))
 
 
-def lambda_let_binding(expr, unbound_name):
+def lambda_let_binding(expr, modifier, unbound_name):
   """
   Runtime let-binding and parse extension.
   """
@@ -36,6 +41,17 @@ def lambda_let_binding(expr, unbound_name):
     var_entry = val.var_ref(v.t, n)
     return pmap(
       lambda e: val.bind_var(n, v, e),
-      expr.scoped_subexpression(scope().bind(**{n: var_entry})))
+      modifier(expr.scoped_subexpression(scope().bind(**{n: var_entry}))))
 
   return pflatmap(pmaps(bind, seq(unbound_name, expr)))
+
+
+def lambda_parser(expr, modifier, argname, argtype):
+  """
+  Parses a lambda body within a subscope, with the specified argname and
+  argtype bound as a local variable, returning a lambda val.
+  """
+  argref = val.var_ref(argtype, argname)
+  return pmap(
+    lambda e: val.fn(argtype, argname, e),
+    modifier(expr.scoped_subexpression(scope().bind(**{argname: argref}))))

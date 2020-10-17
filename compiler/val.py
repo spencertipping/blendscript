@@ -9,6 +9,7 @@ the resulting Python code is compiled.
 
 from functools import reduce
 
+from ..runtime.fn import fn
 from .types import *
 
 
@@ -116,12 +117,21 @@ class val:
   def float(cls, n): return cls.lit(t_number, float(n))
 
   @classmethod
-  def fn(cls, rt, at, f):
+  def of_fn(cls, at, rt, f):
     """
     Converts a unary Python function with the specified argument types into a
     BlendScript function.
     """
-    return cls.of(t_fn(rt, at), f)
+    return cls.of(t_fn(at, rt), f)
+
+  @classmethod
+  def fn(cls, at, argname, body):
+    """
+    Compiles to a lambda with the specified val as the body.
+    """
+    return cls(t_fn(at, body.t),
+               [fn_val, f'(lambda {argname}:', body,
+                ',source=', repr(f'\\{argname}{at} {body}'), ')'])
 
   @classmethod
   def list(cls, *xs):
@@ -172,3 +182,6 @@ class val:
     return val(t_dynamic, ['(', t,
                            ' if ', self,
                            ' else ', f, ')'])
+
+
+fn_val = with_typevar(lambda v: val.of_fn(v, v, fn))
