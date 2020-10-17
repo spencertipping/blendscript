@@ -69,7 +69,7 @@ class fn_type(blendscript_type):
     self.a = a
     self.r = r
 
-  def value_arity(self): return 1 + self.r.value_arity()
+  def value_arity(self): return 1 + max(0, self.r.value_arity())
   def arg_type(self):    return self.a
   def return_type(self): return self.r
 
