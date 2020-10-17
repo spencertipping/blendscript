@@ -4,8 +4,6 @@ Function objects and utilities for BlendScript runtime values.
 
 from functools import reduce
 
-def compose(f, g): return fn(lambda *xs, **d: f(g(*xs, **d)))
-def method(m):     return fn(lambda x, *ys: getattr(x, m)(*ys))
 
 class fn:
   """
@@ -22,18 +20,35 @@ class fn:
   (-f)(x)    == -f(x)
   """
   def __init__(self, f, source=None):
-    self.f = f.f if type(f) == type(self) else f
+    self.f      = f.f if type(f) == type(self) else f
     self.source = source
 
-  def __call__(self, *xs, **d): return self.f(*xs, **d)
+  def __call__(self, *xs): return self.f(*xs)
 
-  def __add__(self, g): return fn(lambda *xs, **d: self.f(*xs, **d) + g(*xs, **d))
-  def __neg__(self):    return fn(lambda *xs, **d: -self.f(*xs, **d))
+  def __add__(self, g):    return fn(lambda *xs: self.f(*xs) + g(*xs))
+  def __neg__(self):       return fn(lambda *xs: -self.f(*xs))
 
-  def __mul__(self, xs): return map(self.f, xs)
-  def __div__(self, xs): return reduce(self.f, xs)
-  def __mod__(self, xs): return filter(self.f, xs)
-
+  def __mul__(self, xs):   return map(self.f, xs)
+  def __div__(self, xs):   return reduce(self.f, xs)
+  def __mod__(self, xs):   return filter(self.f, xs)
   def __matmul__(self, g): return compose(self.f, g)
 
-  def __str__(self): return self.source or str(self.f)
+  def __str__(self):       return self.source or str(self.f)
+
+
+def compose(f, g):
+  """
+  Composition of two functions. The inner function will be invoked on all args
+  and kwargs; the outer function just receives a singular result from the inner
+  one.
+  """
+  return fn(lambda *xs, **d: f(g(*xs, **d)))
+
+
+def method(m):
+  """
+  Returns a fn() that invokes the specified method on whichever object is
+  passed in as the first argument. Remaining arguments are passed to the
+  method.
+  """
+  return fn(lambda x, *ys, **d: getattr(x, m)(*ys, **d))
