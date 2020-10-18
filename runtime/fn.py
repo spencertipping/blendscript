@@ -52,3 +52,12 @@ def method(m):
   method.
   """
   return fn(lambda x, *ys, **d: getattr(x, m)(*ys, **d))
+
+
+def preloaded_method(m, *args, **kwargs):
+  """
+  Returns a fn() that invokes the specified method on an object and returns the
+  result. The method will be invoked with the specified set of preloaded
+  parameters.
+  """
+  return fn(lambda o: getattr(o, m)(*args, **kwargs))

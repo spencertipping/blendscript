@@ -91,9 +91,9 @@ def set_type(t):  return unary_type('{}', t)
 
 t_dynamic = dynamic_type()
 
-t_list    = list_type
-t_set     = set_type
-t_fn      = fn_type
+t_list = list_type
+t_set  = set_type
+t_fn   = fn_type
 
 t_number = atom_type('N')
 t_string = atom_type('S')

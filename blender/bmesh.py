@@ -7,10 +7,10 @@ This is just a bmesh object with a sidecar of named geometry selections.
 import bmesh
 import bpy
 
-from functools import reduce
-from mathutils import Vector
+from functools    import reduce
+from mathutils    import Vector
 
-from ..objects.function import method
+from ..runtime.fn import method
 
 
 def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]

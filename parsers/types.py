@@ -12,25 +12,24 @@ from .expr  import *
 from ..compiler.types import *
 
 
-# TODO: rewrite this
 type_expr = expr_grammar()
 
 type_expr.ops.add(**{
   '(':  iseq(0, type_expr, lit(')')),
-
-  '.':  const(t_dynamic, empty),
-  'I':  const(t_int,     empty),
-  'B':  const(t_bool,    empty),
-  'N':  const(t_number,  empty),
-  'S':  const(t_string,  empty),
-  'V2': const(t_vec2,    empty),
-  'V3': const(t_vec3,    empty),
-  'V4': const(t_vec4,    empty),
-  'M3': const(t_mat33,   empty),
-  'M4': const(t_mat44,   empty),
-
-  'B/obj':  const(t_blendobj,  empty),
-  'B/mesh': const(t_blendmesh, empty),
-
   '[]': pmap(t_list, type_expr),
   '->': pmaps(t_fn, seq(type_expr, type_expr))})
+
+type_expr.bind(**{
+  '.':  t_dynamic,
+  'I':  t_int,
+  'B':  t_bool,
+  'N':  t_number,
+  'S':  t_string,
+  'V2': t_vec2,
+  'V3': t_vec3,
+  'V4': t_vec4,
+  'M3': t_mat33,
+  'M4': t_mat44,
+
+  'B/obj':  t_blendobj,
+  'B/mesh': t_blendmesh})

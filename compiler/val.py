@@ -149,6 +149,13 @@ class val:
     ys.append(')')
     return cls(t_list(t), ys)
 
+  def typed(self, t):
+    """
+    Returns a new val that holds the same quantity, but which has a different
+    type.
+    """
+    return val(t, self.code, ref=self.ref)
+
   def __str__(self):
     l = []
     self.str_into(l)
