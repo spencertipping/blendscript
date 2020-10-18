@@ -41,6 +41,9 @@ val_atom.bind(**{
 
   'L':  with_typevar(lambda v: val.of_fn([t_list(v)], t_list(v), list)),
 
+  '`':  with_typevar(lambda v: val.of_fn([t_int, t_list(v)], v,
+                                         lambda i, xs: xs[i])),
+
   '+':  binop_fn(lambda x, y: x + y),
   '*':  binop_fn(lambda x, y: x * y),
   '/':  binop_fn(lambda x, y: y / x),

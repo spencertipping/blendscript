@@ -85,8 +85,13 @@ class val:
     works because the value is serialized into the compiled output, not
     referenced via the global gensym table.)
     """
-    if eval(repr(v)) != v: raise Exception(
-      f'{v} is not sufficiently serializable to use with val.lit()')
+    r = repr(v)
+    ok = False
+    try: ok = eval(r) == v
+    except: pass
+
+    if not ok: raise Exception(
+      f'{repr(v)} is not sufficiently serializable to use with val.lit()')
     return cls(t, repr(v), ref=v)
 
   @classmethod
@@ -129,7 +134,7 @@ class val:
       if len(xs) == n_args:
         return f(*xs)
       else:
-        return fn(partial(g, *xs))
+        return fn(partial(g, *xs), source=f'{f}({", ".join(map(str, xs))}, ...)')
 
     t = rt
     for a in reversed(ats):
@@ -199,9 +204,9 @@ class val:
     """
     Create a ternary expression.
     """
-    return val(t_dynamic, ['(', t,
-                           ' if ', self,
-                           ' else ', f, ')'])
+    t.t.unify_with(f.t)
+    self.t.unify_with(t_bool)
+    return val(t.t, ['(', t, ' if ', self, ' else ', f, ')'])
 
 
 fn_val = with_typevar(lambda v: val.of_fn([v], v, fn))

@@ -13,8 +13,10 @@ import traceback
 from time import time
 from sys  import stdin
 
-from .parsers.peg import pmap
-from .parsers.val import val_expr
+from .parsers.peg     import pmap
+from .parsers.val     import val_expr
+from .parsers.bmesh   import *
+from .parsers.bobject import *
 
 from .runtime.val         import *
 from .runtime.blendermath import *

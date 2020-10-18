@@ -21,7 +21,7 @@ p_number = alt(p_float, p_int)
 
 
 def re_str(r):     return pmap(lambda s: val.lit(t_string, s), re(r))
-def p_list(*ps):   return pmaps(val.list, seq(*ps))
+def p_list(*ps):   return pmap(lambda xs: val.list(*filter(None, xs)), seq(*ps))
 def p_lit(t, p):   return pmap(lambda v: val.lit(t, v), p)
 def p_typed(t, p): return pmap(lambda v: v.typed(t), p)
 

@@ -34,6 +34,7 @@ class fn:
   def __matmul__(self, g): return compose(self.f, g)
 
   def __str__(self):       return self.source or str(self.f)
+  def __repr__(self):      return str(self)
 
 
 def compose(f, g):
@@ -51,13 +52,15 @@ def method(m):
   passed in as the first argument. Remaining arguments are passed to the
   method.
   """
-  return fn(lambda x, *ys, **d: getattr(x, m)(*ys, **d))
+  return fn(lambda x, *ys, **d: getattr(x, m)(*ys, **d),
+            source=f'{x}.{m}(...)')
 
 
-def preloaded_method(m, *args, **kwargs):
+def preloaded_method(_, *args, **kwargs):
   """
   Returns a fn() that invokes the specified method on an object and returns the
   result. The method will be invoked with the specified set of preloaded
   parameters.
   """
-  return fn(lambda o: getattr(o, m)(*args, **kwargs))
+  return fn(lambda o: getattr(o, _)(*args, **kwargs),
+            source=f'.{_}(*{args}, **{kwargs})')

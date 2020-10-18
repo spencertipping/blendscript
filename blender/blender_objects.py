@@ -2,8 +2,6 @@
 Blender object references (by name)
 """
 
-import bpy
-
 from time import time
 
 from ..compiler.types import *
@@ -31,42 +29,48 @@ t_blendobj  = atom_type('B/obj')
 t_blendmesh = atom_type('B/mesh')
 
 
-def blender_add_object(name, obj):
-  t0 = time()
-  if len(name) and name in bpy.data.objects:
-    bpy.data.objects.remove(bpy.data.objects[name])
-  linked_obj = bpy.data.objects.new(name, obj)
-  bpy.context.scene.collection.objects.link(linked_obj)
-  bpy.context.view_layer.objects.active = linked_obj
-  linked_obj.select_set(True)
+try:
+  import bpy
 
-  bpy.ops.object.mode_set(mode='EDIT')
-  bpy.ops.object.mode_set(mode='OBJECT')
-  t1 = time()
+  def blender_add_object(name, obj):
+    t0 = time()
+    if len(name) and name in bpy.data.objects:
+      bpy.data.objects.remove(bpy.data.objects[name])
+    linked_obj = bpy.data.objects.new(name, obj)
+    bpy.context.scene.collection.objects.link(linked_obj)
+    bpy.context.view_layer.objects.active = linked_obj
+    linked_obj.select_set(True)
 
-  if t1 - t0 > 0.1:
-    print(f'{t1 - t0} second(s) to add object {linked_obj.name}')
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    t1 = time()
 
-  return linked_obj.name
+    if t1 - t0 > 0.1:
+      print(f'{t1 - t0} second(s) to add object {linked_obj.name}')
 
-
-# TODO: handle parent/child promotion using type coercion
-def blender_parent_to(parent, child):
-  if isinstance(parent, str): parent = bpy.data.objects[parent]
-  if isinstance(child,  str): child  = bpy.data.objects[child]
-  child.parent = parent
-  return child
+    return linked_obj.name
 
 
-def blender_move_to(obj, v):
-  if isinstance(obj, str): obj = bpy.data.objects[obj]
-  obj.location = v
-  return obj
+  # TODO: handle parent/child promotion using type coercion
+  def blender_parent_to(parent, child):
+    if isinstance(parent, str): parent = bpy.data.objects[parent]
+    if isinstance(child,  str): child  = bpy.data.objects[child]
+    child.parent = parent
+    return child
 
 
-defexprop(**{
-  'BC': const('_clear_blendscript()', empty),
-  'BM': pmaps(lambda p, v: f'_blender_move_to({p}, {v})', seq(expr, expr)),
-  'BP': pmaps(lambda p, c: f'_blender_parent_to({p}, {c})', seq(expr, expr)),
-  'B:': pmaps(lambda n, o: f'_blender_add_object("{n or ""}", {o})',
-              seq(maybe(p_lword), expr))})
+  def blender_move_to(obj, v):
+    if isinstance(obj, str): obj = bpy.data.objects[obj]
+    obj.location = v
+    return obj
+
+
+  defexprop(**{
+    'BC': const('_clear_blendscript()', empty),
+    'BM': pmaps(lambda p, v: f'_blender_move_to({p}, {v})', seq(expr, expr)),
+    'BP': pmaps(lambda p, c: f'_blender_parent_to({p}, {c})', seq(expr, expr)),
+    'B:': pmaps(lambda n, o: f'_blender_add_object("{n or ""}", {o})',
+                seq(maybe(p_lword), expr))})
+
+except ModuleNotFoundError:
+  print('warning: blender object support is unavailable')
