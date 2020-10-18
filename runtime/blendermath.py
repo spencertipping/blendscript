@@ -11,15 +11,22 @@ from ..parsers.basic  import *
 from ..parsers.val    import *
 from .fn              import fn
 
+
 try:
   m = importlib.import_module('mathutils')
 
-  vec3        = val.of_fn(t_list(t_number), t_vec3, fn(m.Vector3))
-  translation = val.of_fn(t_vec3,   t_mat44, fn(m.Matrix.Translation))
-  scale       = val.of_fn(t_vec3,   t_mat33, fn(m.Matrix.Diagonal))
-  rotatex     = val.of_fn(t_number, t_mat33, fn(lambda t: m.Matrix.Rotation(t, 3, 'X')))
-  rotatey     = val.of_fn(t_number, t_mat33, fn(lambda t: m.Matrix.Rotation(t, 3, 'Y')))
-  rotatez     = val.of_fn(t_number, t_mat33, fn(lambda t: m.Matrix.Rotation(t, 3, 'Z')))
+  t_vec2   = atom_type('V2')
+  t_vec3   = atom_type('V3')
+  t_vec4   = atom_type('V4')
+  t_mat33  = atom_type('M33')
+  t_mat44  = atom_type('M44')
+
+  vec3        = val.of_fn([t_list(t_number)], t_vec3, m.Vector3)
+  translation = val.of_fn([t_vec3],   t_mat44, m.Matrix.Translation)
+  scale       = val.of_fn([t_vec3],   t_mat33, m.Matrix.Diagonal)
+  rotatex     = val.of_fn([t_number], t_mat33, lambda t: m.Matrix.Rotation(t, 3, 'X'))
+  rotatey     = val.of_fn([t_number], t_mat33, lambda t: m.Matrix.Rotation(t, 3, 'Y'))
+  rotatez     = val.of_fn([t_number], t_mat33, lambda t: m.Matrix.Rotation(t, 3, 'Z'))
 
   val_atom.ops.add(
     x=pmap( lambda x:       vec3(val.list(x, 0, 0)), val_atom),

@@ -10,31 +10,40 @@ from ..parsers.val    import *
 from .fn              import fn
 
 
-unop_type  = with_typevar(lambda v: fn_type(v, v))
-binop_type = with_typevar(lambda v: fn_type(v, fn_type(v, v)))
+def number_fn(f): return val.of_fn([t_number], t_number, f)
+
+def unop_fn(f):
+  return with_typevar(lambda v: val.of_fn([v], v, f))
+
+def binop_fn(f):
+  return with_typevar(lambda v: val.of_fn([v, v], v, f))
+
 
 val_atom.bind(**{
   'tau': val.lit(t_number, tau),
 
-  'sin':  val.of_fn(t_number, t_number, sin),
-  'cos':  val.of_fn(t_number, t_number, cos),
-  'tan':  val.of_fn(t_number, t_number, tan),
-  'asin': val.of_fn(t_number, t_number, asin),
-  'acos': val.of_fn(t_number, t_number, acos),
-  'atan': val.of_fn(t_number, t_number, atan),
+  'dr':   number_fn(radians),
+  'rd':   number_fn(degrees),
 
-  'sqrt':  val.of_fn(t_number, t_number, sqrt),
-  'erf':   val.of_fn(t_number, t_number, erf),
-  'gamma': val.of_fn(t_number, t_number, gamma),
-  'exp':   val.of_fn(t_number, t_number, exp),
-  'log':   val.of_fn(t_number, t_number, log),
-  'log2':  val.of_fn(t_number, t_number, log2),
+  'sin':  number_fn(sin),
+  'cos':  number_fn(cos),
+  'tan':  number_fn(tan),
+  'asin': number_fn(asin),
+  'acos': number_fn(acos),
+  'atan': number_fn(atan),
 
-  'L':  with_typevar(lambda v: val.of_fn(t_list(v), t_list(v), list)),
+  'sqrt':  number_fn(sqrt),
+  'erf':   number_fn(erf),
+  'gamma': number_fn(gamma),
+  'exp':   number_fn(exp),
+  'log':   number_fn(log),
+  'log2':  number_fn(log2),
 
-  '+':  val.of(binop_type, fn(lambda x: fn(lambda y: x + y))),
-  '*':  val.of(binop_type, fn(lambda x: fn(lambda y: x * y))),
-  '-':  val.of(unop_type,  fn(lambda x: -x)),
-  '/':  val.of(binop_type, fn(lambda x: fn(lambda y: y / x))),
-  '**': val.of(binop_type, fn(lambda x: fn(lambda y: x ** y))),
-  '.':  val.of(binop_type, fn(lambda x: fn(lambda y: x @ y)))})
+  'L':  with_typevar(lambda v: val.of_fn([t_list(v)], t_list(v), list)),
+
+  '+':  binop_fn(lambda x, y: x + y),
+  '*':  binop_fn(lambda x, y: x * y),
+  '/':  binop_fn(lambda x, y: y / x),
+  '**': binop_fn(lambda x, y: y ** x),
+  '.':  binop_fn(lambda x, y: x @ y),
+  '-':  unop_fn(lambda x: -x)})

@@ -6,10 +6,7 @@ import bpy
 
 from time import time
 
-from .peg   import *
-from .basic import *
-from .expr  import *
-
+from ..compiler.types import *
 from ..runtime.fn import *
 
 
@@ -28,6 +25,10 @@ of collections. Object/object parenting is different.
 We should create a custom property on all BlendScript objects and auto-nuke
 them when we set up the scene context. That way BlendScript is declarative.
 """
+
+
+t_blendobj  = atom_type('B/obj')
+t_blendmesh = atom_type('B/mesh')
 
 
 def blender_add_object(name, obj):
@@ -62,10 +63,6 @@ def blender_move_to(obj, v):
   obj.location = v
   return obj
 
-
-defexprglobals(_blender_add_object=blender_add_object,
-               _blender_move_to=blender_move_to,
-               _blender_parent_to=blender_parent_to)
 
 defexprop(**{
   'BC': const('_clear_blendscript()', empty),

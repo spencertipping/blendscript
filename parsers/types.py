@@ -12,6 +12,9 @@ from .expr  import *
 from ..compiler.types import *
 
 
+# TODO: easier currying for ->; we should have it be arbitrarily applicable, so
+# you could write (-> a b c d) and end up with d -> c -> b -> a or something.
+
 type_expr = expr_grammar()
 
 type_expr.ops.add(**{
@@ -24,12 +27,4 @@ type_expr.bind(**{
   'I':  t_int,
   'B':  t_bool,
   'N':  t_number,
-  'S':  t_string,
-  'V2': t_vec2,
-  'V3': t_vec3,
-  'V4': t_vec4,
-  'M3': t_mat33,
-  'M4': t_mat44,
-
-  'B/obj':  t_blendobj,
-  'B/mesh': t_blendmesh})
+  'S':  t_string})

@@ -4,12 +4,45 @@ cd "$(dirname "$0")"
 
 export PYTHONPATH="${PYTHONPATH:-}:$PWD/.."
 
-if [[ ${1:-} == -c ]]; then
-  exec python3 -B -m blendscript <<<"$2"
-fi
 
-if which rlwrap >&/dev/null; then
-  exec rlwrap -H ~/.blendscript-repl-history python3 -B -m blendscript
-else
-  exec python3 -B -m blendscript
-fi
+interactively() {
+  local histfile=$1
+  shift
+  if which rlwrap >&/dev/null; then
+    exec rlwrap -H "$histfile" "$@"
+  else
+    exec "$@"
+  fi
+}
+
+
+usage() {
+  cat <<EOF
+usage:
+  $0 -c 'blendscript-expr'    # evaluate one expression
+  $0 -p                       # drop into Python REPL
+  $0                          # drop into BlendScript REPL
+EOF
+}
+
+
+case ${1:-} in
+  -c)
+    # Command mode: run one expression, print result, exit
+    exec python3 -B -m blendscript <<<"$2"
+    ;;
+
+  -p)
+    # Python mode: import stuff and drop into REPL
+    exec python3 -B -i repl-python-setup.py
+    ;;
+
+  '')
+    interactively ~/.blendscript-repl-history python3 -B -m blendscript
+    ;;
+
+  *)
+    usage
+    exit 1
+    ;;
+esac

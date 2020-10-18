@@ -7,10 +7,10 @@ enough static type information that it can apply specific conversions before
 the resulting Python code is compiled.
 """
 
-from functools import reduce
+from functools import partial, reduce
 
 from ..runtime.fn import fn
-from .types import *
+from .types       import *
 
 
 def sanitize_identifier(s):
@@ -117,12 +117,20 @@ class val:
   def float(cls, n): return cls.lit(t_number, float(n))
 
   @classmethod
-  def of_fn(cls, at, rt, f):
+  def of_fn(cls, ats, rt, f):
     """
     Converts a unary Python function with the specified argument types into a
-    BlendScript function.
+    BlendScript function. If multiple arguments are specified, the type will be
+    appropriately recursive and the function you provide will automatically be
+    curried.
     """
-    return cls.of(t_fn(at, rt), f)
+
+
+    t = rt
+    for a in reversed(ats):
+      t = t_fn(a, t)
+      # TODO: curry f
+    return cls.of(t, fn(f, source=str(t)))
 
   @classmethod
   def fn(cls, at, argname, body):
@@ -191,4 +199,4 @@ class val:
                            ' else ', f, ')'])
 
 
-fn_val = with_typevar(lambda v: val.of_fn(v, v, fn))
+fn_val = with_typevar(lambda v: val.of_fn([v], v, fn))
