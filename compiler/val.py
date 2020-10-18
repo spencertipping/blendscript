@@ -124,13 +124,18 @@ class val:
     appropriately recursive and the function you provide will automatically be
     curried.
     """
-
+    n_args = len(ats)
+    def g(*xs):
+      if len(xs) == n_args:
+        return f(*xs)
+      else:
+        return fn(partial(g, *xs))
 
     t = rt
     for a in reversed(ats):
       t = t_fn(a, t)
-      # TODO: curry f
-    return cls.of(t, fn(f, source=str(t)))
+
+    return cls.of(t, fn(g, source=str(t)))
 
   @classmethod
   def fn(cls, at, argname, body):
