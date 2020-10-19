@@ -65,12 +65,5 @@ try:
     return obj
 
 
-  defexprop(**{
-    'BC': const('_clear_blendscript()', empty),
-    'BM': pmaps(lambda p, v: f'_blender_move_to({p}, {v})', seq(expr, expr)),
-    'BP': pmaps(lambda p, c: f'_blender_parent_to({p}, {c})', seq(expr, expr)),
-    'B:': pmaps(lambda n, o: f'_blender_add_object("{n or ""}", {o})',
-                seq(maybe(p_lword), expr))})
-
 except ModuleNotFoundError:
   print('warning: blender object support is unavailable')

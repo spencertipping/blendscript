@@ -36,7 +36,7 @@ from ..runtime.fn import method, preloaded_method
 try:
   bmesh  = importlib.import_module('bmesh')
   bpy    = importlib.import_module('bpy')
-  Vector = importlib.import_module('mathutils')
+  Vector = importlib.import_module('mathutils').Vector
 
   def make_bmesh(ops):
     name = '_%016x' % hash(tuple(ops))
@@ -82,60 +82,59 @@ val_atom.bind(**{
 bmesh_tag   = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
 bmesh_query = alt()
 bmesh_query.add(
-  p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_query)),
-  p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_query, bmesh_query)),
-  p_typed(t_bmesh_query, p_list(re_str(r'b'),       val_atom,    val_atom)),
-
   p_lit(t_bmesh_query, const(None, lit(':'))),  # select all
   p_lit(t_bmesh_query, p_int),                  # select by history
   p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
-  p_lit(t_bmesh_query, p_lword))                # select by tag (named variable)
+  p_lit(t_bmesh_query, p_lword),                # select by tag (named variable)
+
+  p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_query)),
+  p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_query, bmesh_query)),
+  p_typed(t_bmesh_query, p_list(re_str(r'b'),       val_atom,    val_atom)))
 
 
-make_bmesh_op = val.of_fn(
-  [t_string, t_list(t_bmesh_op_arg)], t_bmesh_op,
-  lambda m, kwps: preloaded_method(m, **dict(kwps)))
+make_bmesh_op_arg = val.of_fn([t_string, t_dynamic], t_bmesh_op_arg,
+                              lambda arg, val: (arg, val))
 
-make_bmesh_op_arg = val.of_fn(
-  [t_string, t_dynamic], t_bmesh_op_arg,
-  lambda arg, val: (arg, val))
+make_bmesh_op = val.of_fn([t_string, t_list(t_bmesh_op_arg)], t_bmesh_op,
+                          lambda m, kwps: preloaded_method(m, **dict(kwps)))
 
 def p_bmesh_op_arg(name, p):
   return pmap(make_bmesh_op_arg(val.lit(t_string, name)), p)
-
-
-bmesh_q = p_bmesh_op_arg('q', bmesh_query)
-bmesh_r = p_bmesh_op_arg(
-  'r', alt(const(val.lit(t_bmesh_tag, None), empty), bmesh_tag))
 
 def p_bmesh_op(name, *p_args):
   return pmap(make_bmesh_op(val.lit(t_string, name)),
               p_list(*filter(None, p_args)))
 
 
+bmesh_q = p_bmesh_op_arg('q', bmesh_query)
+bmesh_r = p_bmesh_op_arg(
+  'r', alt(const(val.lit(t_bmesh_tag, None), empty), bmesh_tag))
+
+
 mesh_op_scope = scope().ops.add(**{
   ':': p_bmesh_op('bind',         bmesh_q, bmesh_r),
   'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
-  't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_atom)),
+  't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
 
   'e': p_bmesh_op('extrude',     bmesh_q, bmesh_r),
-  'v': p_bmesh_op('create_vert', bmesh_r, p_bmesh_op_arg('v', val_atom)),
+  'v': p_bmesh_op('create_vert', bmesh_r, p_bmesh_op_arg('v', val_expr)),
   'd': p_bmesh_op('duplicate',   bmesh_q, bmesh_r),
 
   's': p_bmesh_op(
     'spin',
     bmesh_q, bmesh_r,
-    p_bmesh_op_arg('angle', val_atom),
-    maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_atom))),
-    maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_atom))),
-    maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_atom))),
-    maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_atom))))})
+    p_bmesh_op_arg('angle', val_expr),
+    maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_expr))),
+    maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_expr))),
+    maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_expr))),
+    maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_expr))))})
 
 val_atom.ops.add(**{
   'm[': pflatmap(const(
-    pmaps(val.list, iseq(
-      0, rep(iseq(0,
-                  val_atom.scoped_subexpression(mesh_op_scope),
-                  maybe(lit(',')))), whitespaced(lit(']')))),
+    pmaps(val.list, iseq(0,
+                         rep(iseq(0,
+                                  add_fncalls(val_atom.scoped_subexpression(mesh_op_scope)),
+                                  maybe(lit(',')))),
+                         whitespaced(lit(']')))),
     empty))})

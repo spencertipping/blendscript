@@ -39,6 +39,9 @@ class val:
   def __init__(self, t, code, ref=None):
     # Validate the code object here because I know I'm going to screw this up
     # somewhere
+    if type(code) == val:
+      raise TypeError(f'trying to call val({t}) on {code}, which is already a val')
+
     if type(code) != str:
       for c in code:
         if type(c) != val and type(c) != str:
@@ -70,7 +73,10 @@ class val:
     you should use val.lit() instead to drop a literal string into the code.
     """
     if v in cls.global_vals: return cls.global_vals[v]
-    gs = f'_G{cls.gensym_id}'
+
+    import re
+    words = '_'.join(re.compile(r'\w+').findall(repr(v)))
+    gs = f'_G{words}{cls.gensym_id}'
     r = val(t, gs, ref=v)
     cls.gensym_id += 1
     cls.bound_globals[gs] = v

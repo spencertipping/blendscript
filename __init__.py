@@ -29,6 +29,10 @@ bl_info = {
 }
 
 
+def register():   pass
+def unregister(): pass
+
+
 def compile(source, debug=False):
   """
   Compiles the specified BlendScript source, throwing an error or returning a

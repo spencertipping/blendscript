@@ -12,4 +12,11 @@ from ..compiler.val            import *
 from ..blender.blender_objects import *
 
 
-# TODO
+try:
+  import bpy
+
+  v_add_obj = val.of_fn([t_string, t_blendobj], t_string, blender_add_object)
+  val_atom.bind(**{'b<': v_add_obj})
+
+except ModuleNotFoundError:
+  print('warning: blender object support is unavailable')
