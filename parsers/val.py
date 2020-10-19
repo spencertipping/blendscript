@@ -70,8 +70,8 @@ val_atom.last_resort.add(
 val_atom.literals.add(
   iseq(1, lit('('), val_expr, lit(')')),
 
-  pmap(val.float, p_float),
   pmap(val.int,   p_int),
+  pmap(val.float, p_float),
   pmap(val.str,   re(r'"([^\s()\[\]{}]*)')),
 
   # Python expressions within {}
