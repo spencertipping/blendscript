@@ -4,8 +4,10 @@ Blender object references (by name)
 
 from time import time
 
+from ..compatibility import *
+
 from ..compiler.types import *
-from ..runtime.fn import *
+from ..runtime.fn     import *
 
 
 """
@@ -31,6 +33,13 @@ t_blendmesh = atom_type('B/mesh')
 
 try:
   import bpy
+  import mathutils as m
+
+  def blendify(x):
+    if type(x) == str and x in bpy.data.objects:
+      return bpy.data.objects[x]
+    return x
+
 
   def blender_add_object(name, obj):
     t0 = time()
@@ -51,19 +60,12 @@ try:
     return linked_obj.name
 
 
-  # TODO: handle parent/child promotion using type coercion
-  def blender_parent_to(parent, child):
-    if isinstance(parent, str): parent = bpy.data.objects[parent]
-    if isinstance(child,  str): child  = bpy.data.objects[child]
-    child.parent = parent
-    return child
-
-
-  def blender_move_to(obj, v):
-    if isinstance(obj, str): obj = bpy.data.objects[obj]
-    obj.location = v
+  def blender_move_to(v_or_parent, obj):
+    obj = blendify(obj)
+    if type(v_or_parent) == m.Vector: obj.location = v_or_parent
+    else:                             obj.parent = blendify(v_or_parent)
     return obj
 
 
 except ModuleNotFoundError:
-  print('warning: blender object support is unavailable')
+  blender_not_found()

@@ -2,6 +2,8 @@
 Blender math bindings, if we have them.
 """
 
+from ..compatibility import *
+
 from ..compiler.val   import *
 from ..compiler.types import *
 from ..parsers.peg    import *
@@ -30,7 +32,7 @@ try:
   val_atom.bind(I=val.of(t_mat33, m.Matrix.Identity(3).freeze()))
 
 except ModuleNotFoundError:
-  print("warning: vector and matrix math are unavailable")
+  blender_not_found()
 
   vec3        = val.of_fn([t_list(t_number)], t_vec3, tuple)
   translation = val.of_fn([t_vec3],   t_mat44, tuple)

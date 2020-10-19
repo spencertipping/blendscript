@@ -4,6 +4,10 @@ BMesh geometry generator.
 This is just a bmesh object with a sidecar of named geometry selections.
 """
 
+
+from ..compatibility import *
+
+
 try:
   import bmesh
   import bpy
@@ -176,4 +180,4 @@ try:
       return self
 
 except ModuleNotFoundError:
-  print('warning: bmesh generator is unavailable')
+  blender_not_found()

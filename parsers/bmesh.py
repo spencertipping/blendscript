@@ -18,7 +18,9 @@ which we can refer to specific collections.
 
 import importlib
 
-from time      import time
+from time import time
+
+from ..compatibility import *
 
 from .peg   import *
 from .basic import *
@@ -45,7 +47,7 @@ try:
 
     t0 = time()
     b  = bmesh_and_selection(bmesh.new())
-    b.create_vert(r="_", v=Vector((0, 0, 0)))
+    b.create_vert(r=None, v=Vector((0, 0, 0)))
     for o in ops:
       b = o(b)
     m = b.render(name)
@@ -54,13 +56,13 @@ try:
     return gc_tag(m)
 
 except ModuleNotFoundError:
-  print('warning: bmesh rendering is unavailable')
+  blender_not_found()
   def make_bmesh(ops):
     print(f'make_bmesh({ops})')
 
 
 # NOTE: the type system won't understand this to be a callable type, but in
-# reality these are preloaded method calls, which are functions. This
+# reality these are preloaded method calls, which are Python functions. This
 # prevents the parser from trying to invoke mesh ops on each other in certain
 # cases.
 t_bmesh_op     = atom_type('B/meshop')
@@ -122,13 +124,13 @@ mesh_op_scope = scope().ops.add(**{
   't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
   'g': p_bmesh_op('grab',         bmesh_q, p_bmesh_op_arg('v', val_expr)),
 
-  'e': p_bmesh_op('extrude',     bmesh_q, bmesh_r),
-  'd': p_bmesh_op('duplicate',   bmesh_q, bmesh_r),
+  'e': p_bmesh_op('extrude',   bmesh_q, bmesh_r),
+  'd': p_bmesh_op('duplicate', bmesh_q, bmesh_r),
 
   's': p_bmesh_op(
     'spin',
     bmesh_q, bmesh_r,
-    maybe(p_bmesh_op_arg('angle', val_expr)),
+    maybe(p_bmesh_op_arg('angle',  val_expr)),
     maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_expr))),
     maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_expr))),
     maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_expr))),

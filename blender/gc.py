@@ -3,6 +3,9 @@ Automatic removal of obsolete objects.
 """
 
 
+from ..compatibility import *
+
+
 try:
   import bpy
 
@@ -16,4 +19,4 @@ try:
         collection.remove(o)
 
 except ModuleNotFoundError:
-  pass
+  blender_not_found()
