@@ -8,8 +8,9 @@ try:
   import bmesh
   import bpy
 
+  from math         import tau
   from functools    import reduce
-  from mathutils    import Vector
+  from mathutils    import Matrix, Vector
 
   from ..runtime.fn import method
 
@@ -124,6 +125,10 @@ try:
       bmesh.ops.transform(self.bmesh, matrix=m, verts=verts(self.select(q)))
       return self
 
+    def grab(self, q, v):
+      self.transform(q, Matrix.Translation(v))
+      return self
+
     def extrude(self, q, r='_'):
       """
       Multipurpose extrude. Delegates to individual bmesh methods to extrude
@@ -160,7 +165,7 @@ try:
       self.store(r, ret['geom'])
       return self
 
-    def spin(self, q, r, angle, steps=45,
+    def spin(self, q, r, angle=tau, steps=45,
             center=Vector((0, 0, 0)),
             axis=Vector((0, 0, 1)),
             delta=Vector((0, 0, 0))):

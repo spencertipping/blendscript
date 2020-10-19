@@ -21,6 +21,7 @@ class blendscript_type:
   def arg_type(self):    return None
   def return_type(self): return None
   def value_arity(self): return 0
+  def instantiate(self): return self
 
   def unify_with(self, t):
     # TODO: HM stuff
@@ -56,6 +57,9 @@ class unary_type(blendscript_type):
     self.name = name
     self.a    = a
 
+  def instantiate(self):
+    return unary_type(self.name, self.a.instantiate())
+
   def __str__(self): return f'({self.name} {self.a})'
   def __hash__(self): return hash((self.name, self.a))
   def __eq__(self, t):
@@ -70,6 +74,9 @@ class fn_type(blendscript_type):
     self.a = a
     self.r = r
 
+  def instantiate(self):
+    return fn_type(self.a.instantiate(), self.r.instantiate())
+
   def value_arity(self): return 1 + max(0, self.r.value_arity())
   def arg_type(self):    return self.a
   def return_type(self): return self.r
@@ -81,6 +88,11 @@ class fn_type(blendscript_type):
 
 
 def with_typevars(f):
+  """
+  A way to bind some typevars within an expression:
+
+  my_type = with_typevars(lambda a, b, c: t_fn(a, t_fn(b, c)))
+  """
   return f(*(typevar() for p in signature(f).parameters))
 
 

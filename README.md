@@ -11,19 +11,45 @@ blendscript.live(r'''
 ''')
 ```
 
+You can also run an offline REPL without loading Blender-specific libraries:
+
+```sh
+$ ./repl -c '/+[1,2,3]'
+6
+$ ./repl
+>>> f(+1) L*fi5
+[1, 2, 3, 4, 5] :: ([] .) (2ms)
+>>>
+```
+
 
 ## Language structure
 BlendScript's operators use Łukasiewicz notation (prefix notation, the opposite
 of stack-oriented Reverse Polish Notation) and support automatic currying and
-sections, just like operator sections in Haskell. Parentheses are optional; when
-present, they provide a Lisp-style syntax:
+sections, just like operator sections in Haskell. Parentheses are often
+optional; when present, they provide a Lisp-style syntax:
 
 ```
 + 3 * 4 5           # no parens required
 (+ 3 (* 4 5))       # same thing, with parens
 ```
 
-Because BlendScript is an interactive language, it uses parse failure as an
-internal mechanism to select alternatives but generally doesn't propagate this
-failure upwards as a syntax or runtime error. For example, `+ 3 * 4` produces
-`7` despite the fact that `* 4` would normally be parsed as a function.
+This works because BlendScript uses type information to try to figure out how to
+fold things up when it appears to be ambiguous. (We'll eventually have a variant
+of Hindley-Milner; for now it's partially typed and often falls back to
+dynamic/unknown types.)
+
+`let`-bindings are achieved by writing an unbound identifier followed by a
+value; the value immediately following such a binding will be parsed within a
+lexical scope that binds the name you provided:
+
+```
+>>> f (+ 1) f 5
+6
+```
+
+
+## Builtin functions
+**TODO:** document this
+
+...for now, you can check out [runtime/val.py](runtime/val.py).

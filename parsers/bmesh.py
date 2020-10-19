@@ -76,7 +76,7 @@ type_expr.bind(**{
   'B/meshquery': t_bmesh_query})
 
 val_atom.bind(**{
-  'm<<': val.of_fn([t_list(t_bmesh_op)], t_blendmesh, make_bmesh)})
+  'm<': val.of_fn([t_list(t_bmesh_op)], t_blendmesh, make_bmesh)})
 
 
 bmesh_tag   = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
@@ -85,7 +85,7 @@ bmesh_query.add(
   p_lit(t_bmesh_query, const(None, lit(':'))),  # select all
   p_lit(t_bmesh_query, p_int),                  # select by history
   p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
-  p_lit(t_bmesh_query, p_lword),                # select by tag (named variable)
+  p_lit(t_bmesh_query, iseq(1, lit('/'), p_varname)),
 
   p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_query)),
   p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_query, bmesh_query)),
@@ -106,7 +106,9 @@ def p_bmesh_op(name, *p_args):
               p_list(*filter(None, p_args)))
 
 
-bmesh_q = p_bmesh_op_arg('q', bmesh_query)
+bmesh_q = p_bmesh_op_arg(
+  'q', alt(const(val.lit(t_bmesh_query, -1), empty), bmesh_query))
+
 bmesh_r = p_bmesh_op_arg(
   'r', alt(const(val.lit(t_bmesh_tag, None), empty), bmesh_tag))
 
@@ -118,6 +120,7 @@ mesh_op_scope = scope().ops.add(**{
   'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
   't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
+  'g': p_bmesh_op('grab',         bmesh_q, p_bmesh_op_arg('v', val_expr)),
 
   'e': p_bmesh_op('extrude',     bmesh_q, bmesh_r),
   'd': p_bmesh_op('duplicate',   bmesh_q, bmesh_r),
@@ -125,7 +128,7 @@ mesh_op_scope = scope().ops.add(**{
   's': p_bmesh_op(
     'spin',
     bmesh_q, bmesh_r,
-    p_bmesh_op_arg('angle', val_expr),
+    maybe(p_bmesh_op_arg('angle', val_expr)),
     maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_expr))),
     maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_expr))),
     maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_expr))),
