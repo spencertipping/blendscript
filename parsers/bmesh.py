@@ -113,12 +113,13 @@ bmesh_r = p_bmesh_op_arg(
 
 mesh_op_scope = scope().ops.add(**{
   ':': p_bmesh_op('bind',         bmesh_q, bmesh_r),
+  'V': p_bmesh_op('create_vert', bmesh_r, p_bmesh_op_arg('v', val_expr)),
+
   'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
   't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
 
   'e': p_bmesh_op('extrude',     bmesh_q, bmesh_r),
-  'v': p_bmesh_op('create_vert', bmesh_r, p_bmesh_op_arg('v', val_expr)),
   'd': p_bmesh_op('duplicate',   bmesh_q, bmesh_r),
 
   's': p_bmesh_op(

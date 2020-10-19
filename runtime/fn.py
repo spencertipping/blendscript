@@ -23,18 +23,21 @@ class fn:
     self.f      = f.f if type(f) == type(self) else f
     self.source = source
 
-  def __call__(self, *xs): return self.f(*xs)
-
-  def __add__(self, g):    return fn(lambda *xs: self.f(*xs) + g(*xs))
-  def __neg__(self):       return fn(lambda *xs: -self.f(*xs))
-
-  def __mul__(self, xs):   return map(self.f, xs)
-  def __div__(self, xs):   return reduce(self.f, xs)
-  def __mod__(self, xs):   return filter(self.f, xs)
-  def __matmul__(self, g): return compose(self.f, g)
-
   def __str__(self):       return self.source or str(self.f)
   def __repr__(self):      return str(self)
+  def __call__(self, *xs): return self.f(*xs)
+
+  def __add__(self, g):       return fn(lambda *xs: self.f(*xs) + g(*xs))
+  def __neg__(self):          return fn(lambda *xs: -self.f(*xs))
+  def __rmul__(self, xs):     return map(self.f, xs)
+  def __rtruediv__(self, xs): return reduce(self.f, xs)
+  def __rmod__(self, xs):     return filter(self.f, xs)
+  def __matmul__(self, g):    return compose(self.f, g)
+
+  def __and__(self, g): return fn(lambda *xs: self.f(*xs) & g(*xs))
+  def __or__(self, g):  return fn(lambda *xs: self.f(*xs) | g(*xs))
+  def __xor__(self, g): return fn(lambda *xs: self.f(*xs) ^ g(*xs))
+
 
 
 def compose(f, g):

@@ -9,6 +9,7 @@ import_code = r'''
 from blendscript.compiler.val   import *
 from blendscript.compiler.types import *
 from blendscript.parsers.bmesh  import *
+from blendscript.runtime.fn     import *
 '''.strip()
 
 

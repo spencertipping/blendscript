@@ -164,14 +164,15 @@ class val:
     compiled as a Python tuple. The type is inferred as the upper bound of all
     member types.
     """
-    t  = typevar()
+    t  = None
     ys = ['(']
     for x in xs:
+      if t is None: t = x.t
       x.t.unify_with(t)
       ys.append(x)
       ys.append(',')
     ys.append(')')
-    return cls(t_list(t), ys)
+    return cls(t_list(t or typevar()), ys)
 
   def typed(self, t):
     """

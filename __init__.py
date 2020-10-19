@@ -42,17 +42,20 @@ def compile(source, debug=False):
   """
   t0 = time()
   if type(source) == str: source = source.encode()
-  f, i = pmap(lambda v: (v.t, v.compile()), val_expr)(source, 0)
+  v, i = val_expr(source, 0)
+
   if i is None: raise SyntaxError(
     f'blendscript.compile(): failed to parse {source}')
   if i != len(source): raise SyntaxError(
     f'blendscript.compile(): failed to parse beyond {i}: {source[i:]}')
+
+  if debug: print(f'-> {v}')
+  f = (v.t, v.compile())
   t1 = time()
 
   if t1 - t0 > 0.1:
     print(f'{t1 - t0} second(s) to parse+compile script {source}')
 
-  if debug: print(f"compiled blendscript to function: {f}")
   return f
 
 

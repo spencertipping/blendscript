@@ -18,12 +18,22 @@ def unop_fn(f):
 def binop_fn(f):
   return with_typevar(lambda v: val.of_fn([v, v], v, f))
 
+def cmp_fn(f):
+  return with_typevar(lambda v: val.of_fn([v, v], t_bool, f))
+
+
+range_fn = val.of_fn([t_int], t_list(t_int), range)
+
+val_atom.ops.add(i=pmap(range_fn, p_lit(t_int, p_int)))
+
 
 val_atom.bind(**{
   'tau': val.lit(t_number, tau),
 
   'dr':   number_fn(radians),
   'rd':   number_fn(degrees),
+  'tr':   number_fn(lambda t: tau * t),
+  'qr':   number_fn(lambda q: tau * q / 4),
 
   'sin':  number_fn(sin),
   'cos':  number_fn(cos),
@@ -45,8 +55,22 @@ val_atom.bind(**{
                                          lambda i, xs: xs[i])),
 
   '+':  binop_fn(lambda x, y: x + y),
-  '*':  binop_fn(lambda x, y: x * y),
+  '*':  binop_fn(lambda x, y: y * x),
   '/':  binop_fn(lambda x, y: y / x),
+  '%':  binop_fn(lambda x, y: y % x),
   '**': binop_fn(lambda x, y: y ** x),
   '.':  binop_fn(lambda x, y: x @ y),
-  '-':  unop_fn(lambda x: -x)})
+  '-':  unop_fn(lambda x: -x),
+  '!':  unop_fn(lambda x: not x),
+
+  '==': cmp_fn(lambda x, y: x == y),
+  '!=': cmp_fn(lambda x, y: x != y),
+  '<=': cmp_fn(lambda x, y: x <= y),
+  '>=': cmp_fn(lambda x, y: x >= y),
+  '>':  cmp_fn(lambda x, y: x > y),
+  '<':  cmp_fn(lambda x, y: x < y),
+
+  '~':  unop_fn(lambda x: ~x),
+  '&':  binop_fn(lambda x, y: x & y),
+  '|':  binop_fn(lambda x, y: x | y),
+  '^':  binop_fn(lambda x, y: x ^ y)})
