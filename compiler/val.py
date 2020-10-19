@@ -216,4 +216,4 @@ class val:
     return val(t.t, ['(', t, ' if ', self, ' else ', f, ')'])
 
 
-fn_val = with_typevar(lambda v: val.of_fn([v], v, fn))
+fn_val = with_typevars(lambda v: val.of_fn([v], v, fn))

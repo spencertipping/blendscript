@@ -11,7 +11,7 @@ fromList, etc, but it won't search for type-unique functions nor will it form
 automatic composition bridges.
 """
 
-from enum import Enum
+from inspect import signature
 
 
 class blendscript_type:
@@ -32,7 +32,8 @@ def isatype(x): return isinstance(x, blendscript_type)
 
 class atom_type(str, blendscript_type):
   """
-  A single concrete type whose kind is *.
+  A single concrete type whose kind is *. Values of this type are not callable;
+  if you need a callable value, use fn_type.
   """
 
 
@@ -79,7 +80,10 @@ class fn_type(blendscript_type):
     return isinstance(t, fn_type) and (self.a, self.r) == (t.a, r.r)
 
 
-def with_typevar(f): return f(typevar())
+def with_typevars(f):
+  return f(*(typevar() for p in signature(f).parameters))
+
+
 def typevar():
   # TODO
   return t_dynamic
