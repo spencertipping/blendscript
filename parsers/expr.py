@@ -76,7 +76,14 @@ class expr_grammar:
     outer = self
     def p(s, i):
       outer.scopes.add(scope)
-      v, i2 = outer(s, i)
+      try:
+        v, i2 = outer(s, i)
+      except Exception as e:
+        v, i2 = None, None
+        outer.scopes.pop()
+        raise e
+
       outer.scopes.pop()
       return (v, i2)
+
     return parserify(p)
