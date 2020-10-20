@@ -9,10 +9,22 @@ from ..compiler.val        import *
 from ..runtime.blendermath import *
 
 from .blender_objects      import *
+from .gc                   import *
 
 
 try:
   import bpy
+
+  def make_armature(bones):
+    return add_hashed(bpy.data.armatures, tuple(bones), generate_armature)
+
+  def generate_armature(bones, name):
+    """
+    Generate an armature from the given bone structure.
+
+    TODO: IK constraints and pole targets
+    """
+
 
   # example armature python:
 

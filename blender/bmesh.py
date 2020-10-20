@@ -5,18 +5,17 @@ This is just a bmesh object with a sidecar of named geometry selections.
 """
 
 
+from math      import tau
+from functools import reduce
+from mathutils import Matrix, Vector
+
 from ..compatibility import *
+from ..runtime.fn    import method
 
 
 try:
   import bmesh
   import bpy
-
-  from math         import tau
-  from functools    import reduce
-  from mathutils    import Matrix, Vector
-
-  from ..runtime.fn import method
 
 
   def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
@@ -178,6 +177,7 @@ try:
                           angle=angle, steps=steps, use_merge=True)
       self.store(r, ret['geom_last'])
       return self
+
 
 except ModuleNotFoundError:
   blender_not_found()

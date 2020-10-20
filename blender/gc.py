@@ -1,5 +1,5 @@
 """
-Automatic removal of obsolete objects.
+Automatic removal of obsolete objects, and content hashing for memoization.
 """
 
 
@@ -17,6 +17,13 @@ try:
     for o in collection:
       if o.get('blendscript/gc') is not None and o not in live_set:
         collection.remove(o)
+
+  def add_hashed(collection, source, generator):
+    name = '_016x' % hash(source)
+    if name in collection:
+      return collection[name]
+    return gc_tag(generator(source, name))
+
 
 except ModuleNotFoundError:
   blender_not_found()

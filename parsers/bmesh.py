@@ -16,8 +16,6 @@ variables to hold onto them; instead what we want is a scoped context within
 which we can refer to specific collections.
 """
 
-import importlib
-
 from time import time
 
 from ..compatibility import *
@@ -25,26 +23,25 @@ from ..compatibility import *
 from .peg   import *
 from .basic import *
 from .expr  import *
-from .types import type_expr
+from .types import *
 from .val   import *
 
 from ..blender.blender_objects import *
 from ..blender.bmesh           import *
 from ..blender.gc              import *
 from ..compiler.types          import *
-from ..runtime.fn import method, preloaded_method
+from ..runtime.fn              import *
 
 
 try:
-  bmesh  = importlib.import_module('bmesh')
-  bpy    = importlib.import_module('bpy')
-  Vector = importlib.import_module('mathutils').Vector
+  import bmesh
+  import bpy
+  from mathutils import Vector
 
   def make_bmesh(ops):
-    name = '_%016x' % hash(tuple(ops))
-    if name in bpy.data.meshes:
-      return bpy.data.meshes[name]
+    return add_hashed(bpy.data.meshes, tuple(ops), generate_bmesh)
 
+  def generate_bmesh(ops, name):
     t0 = time()
     b  = bmesh_and_selection(bmesh.new())
     b.create_vert(r=None, v=Vector((0, 0, 0)))
@@ -135,6 +132,7 @@ mesh_op_scope = scope().ops.add(**{
     maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_expr))),
     maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_expr))),
     maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_expr))))})
+
 
 val_atom.ops.add(**{
   'm[': pflatmap(const(
