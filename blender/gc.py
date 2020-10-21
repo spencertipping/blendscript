@@ -19,9 +19,8 @@ try:
         collection.remove(o)
 
   def add_hashed(collection, source, generator):
-    name = '_016x' % hash(source)
-    if name in collection:
-      return collection[name]
+    name = f'_{abs(hash(source)):016x}'
+    if name in collection: return collection[name]
     return gc_tag(generator(source, name))
 
 

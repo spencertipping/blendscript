@@ -32,11 +32,8 @@ class scope:
     self.ops      = dsp()
     self.literals = alt()
     self.bindings = dsp()
-    self.parser   = modifier(alt(self.ops, self.literals, self.bindings))
-    parserify(self)
-
-  def __call__(self, s, i):
-    return self.parser(s, i)
+    self.parser1  = modifier(self.bindings)
+    self.parser2  = modifier(alt(self.ops, self.literals))
 
   def bind(self, **bindings):
     for b, v in bindings.items():
@@ -54,8 +51,12 @@ class expr_grammar:
     self.top_scope   = scope()
     self.ops         = self.top_scope.ops
     self.literals    = self.top_scope.literals
-    self.scopes      = alt(self.last_resort, self.top_scope)
-    self.parser      = modifier(self.scopes)
+    self.scopes      = [self.top_scope]
+
+    self.alt1   = alt(self.top_scope.parser1)
+    self.alt2   = alt(self.last_resort, self.top_scope.parser2)
+    self.parser = modifier(alt(self.alt2, self.alt1))
+
     parserify(self)
 
   def __call__(self, s, i):
@@ -65,7 +66,7 @@ class expr_grammar:
     """
     Binds new values within the innermost scope.
     """
-    self.scopes.last().bind(**bindings)
+    self.scopes[-1].bind(**bindings)
     return self
 
   def scoped_subexpression(self, scope):
@@ -75,15 +76,21 @@ class expr_grammar:
     """
     outer = self
     def p(s, i):
-      outer.scopes.add(scope)
+      outer.scopes.append(scope)
+      outer.alt1.add(scope.parser1)
+      outer.alt2.add(scope.parser2)
       try:
         v, i2 = outer(s, i)
       except Exception as e:
         v, i2 = None, None
         outer.scopes.pop()
+        outer.alt1.pop()
+        outer.alt2.pop()
         raise e
 
       outer.scopes.pop()
+      outer.alt1.pop()
+      outer.alt2.pop()
       return (v, i2)
 
     return parserify(p)

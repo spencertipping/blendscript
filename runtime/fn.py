@@ -56,7 +56,7 @@ def method(m):
   method.
   """
   return fn(lambda x, *ys, **d: getattr(x, m)(*ys, **d),
-            source=f'{x}.{m}(...)')
+            source=f'.{m}(...)')
 
 
 def preloaded_method(_, *args, **kwargs):

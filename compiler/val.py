@@ -155,7 +155,8 @@ class val:
     """
     return cls(t_fn(at, body.t),
                [fn_val, f'(lambda {argname}:', body,
-                ',source=', repr(f'\\{argname}{at} {body}'), ')'])
+                # ',source=', repr(f'\\{argname}{at} {body}'),
+                ')'])
 
   @classmethod
   def list(cls, *xs):

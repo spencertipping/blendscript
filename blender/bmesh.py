@@ -7,7 +7,6 @@ This is just a bmesh object with a sidecar of named geometry selections.
 
 from math      import tau
 from functools import reduce
-from mathutils import Matrix, Vector
 
 from ..compatibility import *
 from ..runtime.fn    import method
@@ -16,6 +15,7 @@ from ..runtime.fn    import method
 try:
   import bmesh
   import bpy
+  import mathutils as mu
 
 
   def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
@@ -129,7 +129,7 @@ try:
       return self
 
     def grab(self, q, v):
-      self.transform(q, Matrix.Translation(v))
+      self.transform(q, mu.Matrix.Translation(v))
       return self
 
     def extrude(self, q, r='_'):
@@ -169,9 +169,9 @@ try:
       return self
 
     def spin(self, q, r, angle=tau, steps=45,
-            center=Vector((0, 0, 0)),
-            axis=Vector((0, 0, 1)),
-            delta=Vector((0, 0, 0))):
+            center=mu.Vector((0, 0, 0)),
+            axis=mu.Vector((0, 0, 1)),
+            delta=mu.Vector((0, 0, 0))):
       ret = bmesh.ops.spin(self.bmesh, geom=self.select(q),
                           cent=center, axis=axis, dvec=delta,
                           angle=angle, steps=steps, use_merge=True)

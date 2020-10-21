@@ -36,7 +36,7 @@ from ..runtime.fn              import *
 try:
   import bmesh
   import bpy
-  from mathutils import Vector
+  import mathutils as mu
 
   def make_bmesh(ops):
     return add_hashed(bpy.data.meshes, tuple(ops), generate_bmesh)
@@ -44,7 +44,7 @@ try:
   def generate_bmesh(ops, name):
     t0 = time()
     b  = bmesh_and_selection(bmesh.new())
-    b.create_vert(r=None, v=Vector((0, 0, 0)))
+    b.create_vert(r=None, v=mu.Vector((0, 0, 0)))
     for o in ops:
       b = o(b)
     m = b.render(name)
@@ -112,9 +112,10 @@ bmesh_r = p_bmesh_op_arg(
   'r', alt(const(val.lit(t_bmesh_tag, None), empty), bmesh_tag))
 
 
-mesh_op_scope = scope().ops.add(**{
+mesh_op_scope = scope()
+mesh_op_scope.ops.add(**{
   ':': p_bmesh_op('bind',         bmesh_q, bmesh_r),
-  'V': p_bmesh_op('create_vert', bmesh_r, p_bmesh_op_arg('v', val_expr)),
+  'V': p_bmesh_op('create_vert',  bmesh_r, p_bmesh_op_arg('v', val_expr)),
 
   'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
