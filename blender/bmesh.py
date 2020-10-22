@@ -129,7 +129,7 @@ try:
       return self
 
     def grab(self, q, v):
-      self.transform(q, mu.Matrix.Translation(v))
+      self.transform(q, mu.Matrix.Translation(mu.Vector(v)))
       return self
 
     def extrude(self, q, r='_'):
@@ -158,7 +158,12 @@ try:
       self.store(r, rg)
       return self
 
-    def create_vert(self, r, v):
+    def create_cube(self, r, dv=mu.Vector((1, 1, 1))):
+      ret = bmesh.ops.create_cube(self.bmesh, size=1, matrix=mu.Matrix.Diagonal(dv))
+      self.store(r, ret['verts'])
+      return self
+
+    def create_vert(self, r, v=mu.Vector((0, 0, 0))):
       ret = bmesh.ops.create_vert(self.bmesh, co=v)
       self.store(r, ret['vert'])
       return self

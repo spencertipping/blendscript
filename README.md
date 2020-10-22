@@ -22,6 +22,14 @@ $ ./repl
 >>>
 ```
 
+...and for debugging the language itself, you can run a Python repl with
+preloaded imports:
+
+```sh
+$ ./repl -p
+>>> val_expr(b'+ 3 4', 0)
+```
+
 
 ## Language structure
 BlendScript's operators use Łukasiewicz notation (prefix notation, the opposite

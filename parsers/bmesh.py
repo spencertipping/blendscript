@@ -39,18 +39,22 @@ try:
   import mathutils as mu
 
   def make_bmesh(ops):
+    """
+    Creates a hash-memoized bmesh object from the specified list of operations.
+    """
+
+    def generate_bmesh(ops, name):
+      t0 = time()
+      b  = bmesh_and_selection(bmesh.new())
+      for o in ops:
+        b = o(b)
+      m = b.render(name)
+      t1 = time()
+      if t1 - t0 > 0.1: print(f'{int((t1 - t0) * 1000)}ms to render mesh {name}')
+      return gc_tag(m)
+
     return add_hashed(bpy.data.meshes, tuple(ops), generate_bmesh)
 
-  def generate_bmesh(ops, name):
-    t0 = time()
-    b  = bmesh_and_selection(bmesh.new())
-    b.create_vert(r=None, v=mu.Vector((0, 0, 0)))
-    for o in ops:
-      b = o(b)
-    m = b.render(name)
-    t1 = time()
-    if t1 - t0 > 0.1: print(f'{int((t1 - t0) * 1000)}ms to render mesh {name}')
-    return gc_tag(m)
 
 except ModuleNotFoundError:
   blender_not_found()
@@ -114,8 +118,11 @@ bmesh_r = p_bmesh_op_arg(
 
 mesh_op_scope = scope()
 mesh_op_scope.ops.add(**{
-  ':': p_bmesh_op('bind',         bmesh_q, bmesh_r),
-  'V': p_bmesh_op('create_vert',  bmesh_r, p_bmesh_op_arg('v', val_expr)),
+  ':':  p_bmesh_op('bind',         bmesh_q, bmesh_r),
+  'V':  p_bmesh_op('create_vert',  bmesh_r, p_bmesh_op_arg('v', val_expr)),
+  'V0': p_bmesh_op('create_vert',  bmesh_r),
+
+  'c': p_bmesh_op('create_cube',  bmesh_r, p_bmesh_op_arg('dv', val_expr)),
 
   'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
@@ -135,11 +142,4 @@ mesh_op_scope.ops.add(**{
     maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_expr))))})
 
 
-val_atom.ops.add(**{
-  'm[': pflatmap(const(
-    pmaps(val.list, iseq(0,
-                         rep(iseq(0,
-                                  add_fncalls(val_atom.scoped_subexpression(mesh_op_scope)),
-                                  maybe(lit(',')))),
-                         whitespaced(lit(']')))),
-    empty))})
+val_atom.ops.add(**{'m[': list_subscope(val_atom, mesh_op_scope)})
