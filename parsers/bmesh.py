@@ -38,6 +38,14 @@ try:
   import bpy
   import mathutils as mu
 
+  def apply_bmesh_op(b, op):
+    if getattr(op, '__iter__', None):
+      for o in op:
+        b = apply_bmesh_op(b, o)
+      return b
+    else:
+      return op(b)
+
   def make_bmesh(ops):
     """
     Creates a hash-memoized bmesh object from the specified list of operations.
@@ -45,9 +53,8 @@ try:
     def generate_bmesh(ops, name):
       t0 = time()
       b  = bmesh_and_selection(bmesh.new())
-      for o in ops:
-        b = o(b)
-      m = b.render(name)
+      b  = apply_bmesh_op(b, ops)
+      m  = b.render(name)
       t1 = time()
       if t1 - t0 > 0.1: print(f'{int((t1 - t0) * 1000)}ms to render mesh {name}')
       return gc_tag(m)
