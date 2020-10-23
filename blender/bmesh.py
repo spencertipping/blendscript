@@ -29,6 +29,16 @@ try:
   def verts(xs): return uniq(verts_(xs) + [v for e in edges(xs) for v in e.verts])
 
 
+  def vertices_are_disjoint(s, x):
+    """
+    Determines whether x contains any vertices present in the set s.
+    """
+    if type(x) == bmesh.types.BMVert: return not x in s
+    for v in x.verts:
+      if v in s: return False
+    return True
+
+
   class bmesh_and_selection:
     """
     A bmesh object that keeps track of the vertex, edge, and face selections
@@ -149,18 +159,30 @@ try:
       vertices, edges, and faces, to the extent that the query produces them, and
       aggregates the results as though it had been a single operation. Note that
       this can produce ambiguous results in certain cases.
+
+      Not all of the extruded geometry is selected. If it were, a subsequent
+      displacement operation would modify the un-extruded geometry due to
+      inclusive selection.
       """
-      q = self.select(q)
+      q  = self.select(q)
       qf = faces_(q)
       qe = edges_(q)
       qv = verts_(q)
 
+      ivs = verts(q)
+
       rg = []
-      if len(qf): rg += bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
-      if len(qe): rg += bmesh.ops.extrude_edge_only(self.bmesh, edges=qe)['geom']
+      if len(qf):
+        rg += [f for f in bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
+                 if vertices_are_disjoint(ivs, f)]
+
+      if len(qe):
+        rg += [x for x in bmesh.ops.extrude_edge_only(self.bmesh, edges=qe)['geom']
+                 if vertices_are_disjoint(ivs, x)]
+
       if len(qv):
         rv = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=qv)
-        rg += rv['edges'] + rv['verts']
+        rg += [e for e in rv['edges'] if vertices_are_disjoint(ivs, e)] + rv['verts']
 
       self.store(r, rg)
       return self
