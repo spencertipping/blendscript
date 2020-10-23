@@ -71,6 +71,9 @@ try:
       + ['f', q]: faces from query
       + ['e', q]: edges from query
       + ['v', q]: vertices from query
+      + ['^x', q]: sub-select results that hit the lower bound of X coordinates
+        (plus analogous operators: '^X' to upper-bound X, '^y', '^Y', '^z', and
+        '^Z')
       """
       vs = self.bmesh.verts
       es = self.bmesh.edges
@@ -98,6 +101,22 @@ try:
         elif c == 'F': return faces(self.select_(q[1]))
         elif c == 'E': return edges(self.select_(q[1]))
         elif c == 'V': return verts(self.select_(q[1]))
+
+        elif c[0] == '^':
+          vs = verts(self.select_(q[1]))
+          xs = [v.co[0] for v in vs]
+          ys = [v.co[1] for v in vs]
+          zs = [v.co[2] for v in vs]
+          xmin, xmax = (min(xs), max(xs))
+          ymin, ymax = (min(ys), max(ys))
+          zmin, zmax = (min(zs), max(zs))
+
+          if   c == '^x': return filter(lambda v: v.co[0] == xmin, vs)
+          elif c == '^X': return filter(lambda v: v.co[0] == xmax, vs)
+          elif c == '^y': return filter(lambda v: v.co[1] == ymin, vs)
+          elif c == '^Y': return filter(lambda v: v.co[1] == ymax, vs)
+          elif c == '^z': return filter(lambda v: v.co[2] == zmin, vs)
+          elif c == '^Z': return filter(lambda v: v.co[2] == zmax, vs)
 
       raise Exception(f'unsupported bmesh query: {q}')
 

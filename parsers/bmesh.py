@@ -89,7 +89,7 @@ bmesh_query.add(
   p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
   p_lit(t_bmesh_query, iseq(1, lit('/'), p_varname)),
 
-  p_typed(t_bmesh_query, p_list(re_str(r'[FEV]'),   bmesh_q_atom)),
+  p_typed(t_bmesh_query, p_list(re_str(r'[FEV]|\^[xyzXYZ]'), bmesh_q_atom)),
   p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_q_atom, bmesh_q_atom)),
   p_typed(t_bmesh_query, p_list(re_str(r'B'),       val_atom,     val_atom)))
 
