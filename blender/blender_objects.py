@@ -40,6 +40,9 @@ try:
   import mathutils as m
 
 
+  focal_set = []
+
+
   def flatten(xs):
     if type(xs) == list or type(xs) == tuple:
       return (y for x in xs for y in flatten(x))
@@ -80,7 +83,8 @@ try:
     interpreted as a directory structure: parent directories are created using
     collections. (TODO: not implemented yet)
 
-    TODO: handle obj being a list
+    TODO: handle obj being a list: the object should be an empty or a
+    collection or something
     """
     t0 = time()
     if len(name) and name in bpy.data.objects:
@@ -98,6 +102,17 @@ try:
       print(f'{t1 - t0} second(s) to add object {linked_obj.name}')
 
     return linked_obj.name
+
+
+  def blender_focus_on(x):
+    """
+    Sets the specific object(s) into focus within the viewport. The actual
+    focusing is done by blender_refresh_view(); all we do here is queue up the
+    data.
+    """
+    for o in resolve_blender_object(x):
+      focal_set.append(o.name)
+    return x
 
 
   def blender_move_to(v_or_parent, obj):
@@ -119,9 +134,36 @@ try:
     """
     Force any meshes to recalculate face shading. Otherwise we sometimes end up
     with shadeless black, which is difficult to parse visually.
+
+    If any objects have been focused using focal_set, we set the viewport to
+    focus on them.
     """
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.object.mode_set(mode='OBJECT')
+
+    if len(focal_set):
+      for o in bpy.data.objects: o.select_set(False)
+      for o in focal_set:
+        bpy.context.view_layer.objects.active = bpy.data.objects[o]
+        bpy.data.objects[o].select_set(True)
+
+      focused_anything = False
+      for area in bpy.context.screen.areas:
+        if area.type == 'VIEW_3D':
+          c = bpy.context.copy()
+          c['area']   = area
+          c['region'] = area.regions[-1]
+          ret = bpy.ops.view3d.view_selected(c)
+          if 'FINISHED' not in ret:
+            print(f'view_selected: {ret}')
+          else:
+            focused_anything = True
+          break
+
+      if not focused_anything:
+        print('items were in the focal set, but no action was taken')
+
+    focal_set.clear()
 
 
 except ModuleNotFoundError:
