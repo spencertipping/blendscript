@@ -31,8 +31,8 @@ them when we set up the scene context. That way BlendScript is declarative.
 """
 
 
-t_blendobj  = atom_type('B/obj')
-t_blendmesh = atom_type('B/mesh')
+t_blendobj  = atom_type('OB')
+t_blendmesh = atom_type('ME')
 
 
 try:
@@ -40,13 +40,34 @@ try:
   import mathutils as m
 
 
-  def blendify(x):
+  def flatten(xs):
+    if type(xs) == list or type(xs) == tuple:
+      return (y for x in xs for y in flatten(x))
+    else:
+      return [xs]
+
+
+  def resolve_blender_object(x):
     """
-    If x is a string that identifies a Blender object, returns that object.
-    Otherwise returns whatever x is.
+    Returns a list of blender objects referred to by "x", in a type-dependent
+    way. If x is a string, we dereference it to an object. If x is an object,
+    we leave it as-is. If x is a list, we flatten the list and process each
+    element.
     """
-    if type(x) == str and x in bpy.data.objects:
-      return bpy.data.objects[x]
+    def convert(x):
+      if type(x) == str and x in bpy.data.objects: return bpy.data.objects[x]
+      return x
+    return tuple(map(convert, flatten(x)))
+
+
+  def resolve_blender_parent(x):
+    """
+    Resolves x to a single object that can be used to parent another Blender
+    object. This can either be an actual scene object, or it can be a vector
+    that will be become its origin.
+    """
+    x = resolve_blender_object(x)[0]
+    if type(x) == m.Vector: x = unit_scale(x)
     return x
 
 
@@ -58,6 +79,8 @@ try:
     Names can have forward slashes. If they do, those slashes will be
     interpreted as a directory structure: parent directories are created using
     collections. (TODO: not implemented yet)
+
+    TODO: handle obj being a list
     """
     t0 = time()
     if len(name) and name in bpy.data.objects:
@@ -79,12 +102,17 @@ try:
 
   def blender_move_to(v_or_parent, obj):
     """
-    Moves an object to a vector (a location) or to a parent.
+    Sets the parent of one or more Blender objects, returning the parent.
+    Objects are flattened if they are in a list. If any object is not a Blender
+    scene object, it is ignored.
     """
-    obj = blendify(obj)
-    if type(v_or_parent) == m.Vector: obj.location = unit_scale(v_or_parent)
-    else:                             obj.parent = blendify(v_or_parent)
-    return obj
+    parent = resolve_blender_parent(v_or_parent)
+    objects = resolve_blender_object(obj)
+    for o in objects:
+      if isinstance(o, bpy.types.Object):
+        if type(parent) == m.Vector: o.location = parent
+        else:                        o.parent   = parent
+    return objects
 
 
   def blender_refresh_view():

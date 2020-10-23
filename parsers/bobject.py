@@ -17,7 +17,8 @@ from ..blender.blender_objects import *
 try:
   import bpy
 
-  t_blendobjparent = atom_type('B/objparent')
+  # TODO: move this? Bind a type parser?
+  t_blendobjparent = atom_type('OBP')
 
   v_add_obj  = val.of_fn([t_string,         t_blendobj], t_string,   blender_add_object)
   v_move_obj = val.of_fn([t_blendobjparent, t_blendobj], t_blendobj, blender_move_to)

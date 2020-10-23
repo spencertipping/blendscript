@@ -33,8 +33,9 @@ val_atom.literals.add(
         iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
 val_atom.ops.add(**{
-  ':': pflatmap(const(lambda_let_binding(val_atom, add_fncalls, p_lword),
-                      empty)),
+  ':': pflatmap(
+    const(lambda_let_binding(val_atom, add_fncalls, re(r'[^\s()\[\]{}]+')),
+          empty)),
 
   '[': pmaps(val.list, iseq(0,
                             rep(iseq(0, val_expr, maybe(lit(',')))),
