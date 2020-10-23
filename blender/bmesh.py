@@ -10,7 +10,7 @@ from functools import reduce
 
 from ..compatibility import *
 from ..runtime.fn    import method
-
+from .units          import *
 
 try:
   import bmesh
@@ -108,6 +108,12 @@ try:
       this will render this bmesh wrapper unusable for further interaction.
       """
       m = bpy.data.meshes.new(name)
+
+      # Scale the entire geometry to match desired units
+      bmesh.ops.transform(self.bmesh,
+                          matrix=mu.Matrix.Scale(unit_scale(1), 3),
+                          verts=self.bmesh.verts)
+
       self.bmesh.to_mesh(m)
       self.bmesh.free()
       self.bmesh = None

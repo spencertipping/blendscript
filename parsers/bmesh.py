@@ -79,7 +79,7 @@ type_expr.bind(**{
 
 bmesh_tag = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
 
-# TODO: convert bmesh_query into a normal expr grammar
+# TODO: convert bmesh_query into a normal expr grammar?
 bmesh_query = alt()
 bmesh_q_atom = whitespaced(bmesh_query)
 
