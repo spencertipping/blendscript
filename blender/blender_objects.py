@@ -8,6 +8,7 @@ from time import time
 
 from ..compatibility import *
 
+from .gc              import *
 from ..compiler.types import *
 from ..runtime.fn     import *
 
@@ -66,10 +67,7 @@ try:
     bpy.context.view_layer.objects.active = linked_obj
     linked_obj.select_set(True)
 
-    # Force any meshes to recalculate face shading. Otherwise we sometimes end
-    # up with shadeless black, which is difficult to parse visually.
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.object.mode_set(mode='OBJECT')
+    gc_tag(linked_obj)
 
     t1 = time()
     if t1 - t0 > 0.1:
@@ -88,5 +86,16 @@ try:
     return obj
 
 
+  def blender_refresh_view():
+    """
+    Force any meshes to recalculate face shading. Otherwise we sometimes end up
+    with shadeless black, which is difficult to parse visually.
+    """
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
 except ModuleNotFoundError:
   blender_not_found()
+
+  def blender_refresh_view(): pass

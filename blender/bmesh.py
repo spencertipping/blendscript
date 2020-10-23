@@ -163,6 +163,16 @@ try:
       self.store(r, ret['verts'])
       return self
 
+    def create_box(self, r, v1=mu.Vector((0, 0, 0)), v2=mu.Vector((1, 1, 1))):
+      scale_matrix = mu.Matrix.Diagonal(v2 - v1)
+      ret = bmesh.ops.create_cube(self.bmesh, size=1, matrix=scale_matrix)
+      bmesh.ops.translate(self.bmesh,
+                          verts=ret['verts'],
+                          vec=v1 + scale_matrix @ mu.Vector((0.5, 0.5, 0.5)))
+
+      self.store(r, ret['verts'])
+      return self
+
     def create_vert(self, r, v=mu.Vector((0, 0, 0))):
       ret = bmesh.ops.create_vert(self.bmesh, co=v)
       self.store(r, ret['vert'])

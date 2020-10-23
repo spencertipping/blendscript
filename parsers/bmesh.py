@@ -42,7 +42,6 @@ try:
     """
     Creates a hash-memoized bmesh object from the specified list of operations.
     """
-
     def generate_bmesh(ops, name):
       t0 = time()
       b  = bmesh_and_selection(bmesh.new())
@@ -54,7 +53,6 @@ try:
       return gc_tag(m)
 
     return add_hashed(bpy.data.meshes, tuple(ops), generate_bmesh)
-
 
 except ModuleNotFoundError:
   blender_not_found()
@@ -74,25 +72,28 @@ t_bmesh_query = atom_type('B/meshquery')
 
 type_expr.bind(**{
   'B/meshop':    t_bmesh_op,
-  'B/meshoparg': t_bmesh_op,
+  'B/meshoparg': t_bmesh_op_arg,
   'B/meshtag':   t_bmesh_tag,
   'B/meshquery': t_bmesh_query})
 
-val_atom.bind(**{
-  'm<': val.of_fn([t_list(t_bmesh_op)], t_blendmesh, make_bmesh)})
 
+bmesh_tag = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
 
-bmesh_tag   = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
+# TODO: convert bmesh_query into a normal expr grammar
 bmesh_query = alt()
+bmesh_q_atom = whitespaced(bmesh_query)
+
 bmesh_query.add(
+  iseq(1, lit('('), bmesh_q_atom, lit(')')),
+
   p_lit(t_bmesh_query, const(None, lit(':'))),  # select all
   p_lit(t_bmesh_query, p_int),                  # select by history
   p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
   p_lit(t_bmesh_query, iseq(1, lit('/'), p_varname)),
 
-  p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_query)),
-  p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_query, bmesh_query)),
-  p_typed(t_bmesh_query, p_list(re_str(r'b'),       val_atom,    val_atom)))
+  p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_q_atom)),
+  p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_q_atom, bmesh_q_atom)),
+  p_typed(t_bmesh_query, p_list(re_str(r'b'),       val_atom,     val_atom)))
 
 
 make_bmesh_op_arg = val.of_fn([t_string, t_dynamic], t_bmesh_op_arg,
@@ -123,11 +124,13 @@ mesh_op_scope.ops.add(**{
   'V0': p_bmesh_op('create_vert',  bmesh_r),
 
   'c': p_bmesh_op('create_cube',  bmesh_r, p_bmesh_op_arg('dv', val_expr)),
+  'b': p_bmesh_op('create_box',   bmesh_r, p_bmesh_op_arg('v1', val_atom),
+                                           p_bmesh_op_arg('v2', val_atom)),
 
-  'f': p_bmesh_op('context_fill', bmesh_q, bmesh_r),
-  'b': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
-  't': p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
-  'g': p_bmesh_op('grab',         bmesh_q, p_bmesh_op_arg('v', val_expr)),
+  'f':  p_bmesh_op('context_fill', bmesh_q, bmesh_r),
+  'bl': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),
+  't':  p_bmesh_op('transform',    bmesh_q, p_bmesh_op_arg('m', val_expr)),
+  'g':  p_bmesh_op('grab',         bmesh_q, p_bmesh_op_arg('v', val_expr)),
 
   'e': p_bmesh_op('extrude',   bmesh_q, bmesh_r),
   'd': p_bmesh_op('duplicate', bmesh_q, bmesh_r),
@@ -142,4 +145,9 @@ mesh_op_scope.ops.add(**{
     maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_expr))))})
 
 
-val_atom.ops.add(**{'m[': list_subscope(val_atom, mesh_op_scope)})
+make_bmesh_fn = val.of_fn([t_list(t_bmesh_op)], t_blendmesh, make_bmesh)
+val_atom.ops.add(**{
+  'm[': list_subscope(val_atom, mesh_op_scope),
+  'm<': pflatmap(const(pmap(make_bmesh_fn,
+                            val_atom.scoped_subexpression(mesh_op_scope)),
+                       empty))})

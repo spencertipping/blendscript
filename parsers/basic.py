@@ -1,5 +1,5 @@
 """
-Basic building blocks for grammars.
+A library of parse elements that are used in multiple places within BlendScript.
 """
 
 from .peg  import *
@@ -100,6 +100,7 @@ def associate_fncalls(xs):
         v = vs.pop()
         vs[-1] = vs[-1](v)
 
+  # Apply all deferred right-associations.
   while len(vs) > 1:
     v = vs.pop()
     vs[-1] = vs[-1](v)

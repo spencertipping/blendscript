@@ -23,8 +23,8 @@ type_expr.ops.add(**{
   '->': pmaps(t_fn, seq(type_expr, type_expr))})
 
 type_expr.bind(**{
-  '.':  t_dynamic,
-  'I':  t_int,
-  'B':  t_bool,
-  'N':  t_number,
-  'S':  t_string})
+  '.': t_dynamic,
+  'I': t_int,
+  'B': t_bool,
+  'N': t_number,
+  'S': t_string})

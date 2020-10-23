@@ -7,25 +7,22 @@ from math import *
 from ..compiler.types import *
 from ..compiler.val   import *
 from ..parsers.val    import *
+from .blendermath     import *
 from .fn              import fn
 
 
 def number_fn(f): return val.of_fn([t_number], t_number, f)
+def v3_fn(f):     return val.of_fn([t_vec3],   t_vec3,   f)
+def vn_fn(f):     return val.of_fn([t_vec3],   t_number, f)
 
-def unop_fn(f):
-  return with_typevars(lambda v: val.of_fn([v], v, f))
-
-def binop_fn(f):
-  return with_typevars(lambda v: val.of_fn([v, v], v, f))
-
-def cmp_fn(f):
-  return with_typevars(lambda v: val.of_fn([v, v], t_bool, f))
+def unop_fn(f):   return with_typevars(lambda v: val.of_fn([v],    v,      f))
+def binop_fn(f):  return with_typevars(lambda v: val.of_fn([v, v], v,      f))
+def cmp_fn(f):    return with_typevars(lambda v: val.of_fn([v, v], t_bool, f))
 
 
 range_fn = val.of_fn([t_int], t_list(t_int), range)
 
 val_atom.ops.add(i=pmap(range_fn, p_lit(t_int, p_int)))
-
 
 val_atom.bind(**{
   'tau': val.lit(t_number, tau),
@@ -78,3 +75,23 @@ val_atom.bind(**{
   '&':  binop_fn(lambda x, y: x & y),
   '|':  binop_fn(lambda x, y: x | y),
   '^':  binop_fn(lambda x, y: x ^ y)})
+
+
+try:
+  import mathutils as mu
+
+  val_atom.bind(**{
+    '%x':  v3_fn(lambda v: mu.Vector((v[0], 0, 0))),
+    '%y':  v3_fn(lambda v: mu.Vector((0, v[1], 0))),
+    '%z':  v3_fn(lambda v: mu.Vector((0, 0, v[2]))),
+
+    '%xy': v3_fn(lambda v: mu.Vector((v[0], v[1], 0))),
+    '%xz': v3_fn(lambda v: mu.Vector((v[0], 0, v[2]))),
+    '%yz': v3_fn(lambda v: mu.Vector((0, v[1], v[2]))),
+
+    '.x': vn_fn(lambda v: v[0]),
+    '.y': vn_fn(lambda v: v[1]),
+    '.z': vn_fn(lambda v: v[2])})
+
+except ModuleNotFoundError:
+  blender_not_found()

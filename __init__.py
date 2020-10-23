@@ -18,8 +18,17 @@ from .parsers.val     import val_expr
 from .parsers.bmesh   import *
 from .parsers.bobject import *
 
+from .blender.gc          import *
 from .runtime.val         import *
 from .runtime.blendermath import *
+
+
+try:
+  import bpy
+  def gc_objects(): gc(bpy.data.objects)
+
+except ModuleNotFoundError:
+  def gc_objects(): pass
 
 
 bl_info = {
@@ -63,8 +72,11 @@ def run(source, **kwargs):
   """
   Runs the given source directly. This is a shorthand for compile(source)().
   """
+  gc_objects()
   ft, f = compile(source, **kwargs)
-  return (ft, f())
+  v = f()
+  blender_refresh_view()
+  return (ft, v)
 
 
 def live(source, **kwargs):
