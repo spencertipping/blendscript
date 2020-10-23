@@ -56,8 +56,7 @@ try:
 
 except ModuleNotFoundError:
   blender_not_found()
-  def make_bmesh(ops):
-    print(f'make_bmesh({ops})')
+  def make_bmesh(ops): print(f'make_bmesh({ops})')
 
 
 # NOTE: the type system won't understand this to be a callable type, but in
@@ -77,23 +76,22 @@ type_expr.bind(**{
   'B/meshquery': t_bmesh_query})
 
 
-bmesh_tag = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
-
 # TODO: convert bmesh_query into a normal expr grammar?
 bmesh_query = alt()
-bmesh_q_atom = whitespaced(bmesh_query)
+bmesh_q_atom = alt(
+  const(val.lit(t_bmesh_query, -1), empty), whitespaced(bmesh_query))
 
 bmesh_query.add(
-  iseq(1, lit('('), bmesh_q_atom, lit(')')),
+  iseq(1, lit('('), whitespaced(bmesh_query), lit(')')),
 
   p_lit(t_bmesh_query, const(None, lit(':'))),  # select all
   p_lit(t_bmesh_query, p_int),                  # select by history
   p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
   p_lit(t_bmesh_query, iseq(1, lit('/'), p_varname)),
 
-  p_typed(t_bmesh_query, p_list(re_str(r'[fev]'),   bmesh_q_atom)),
+  p_typed(t_bmesh_query, p_list(re_str(r'[FEV]'),   bmesh_q_atom)),
   p_typed(t_bmesh_query, p_list(re_str(r'[-\+\*]'), bmesh_q_atom, bmesh_q_atom)),
-  p_typed(t_bmesh_query, p_list(re_str(r'b'),       val_atom,     val_atom)))
+  p_typed(t_bmesh_query, p_list(re_str(r'B'),       val_atom,     val_atom)))
 
 
 make_bmesh_op_arg = val.of_fn([t_string, t_dynamic], t_bmesh_op_arg,
@@ -110,11 +108,11 @@ def p_bmesh_op(name, *p_args):
               p_list(*filter(None, p_args)))
 
 
-bmesh_q = p_bmesh_op_arg(
-  'q', alt(const(val.lit(t_bmesh_query, -1), empty), bmesh_query))
+bmesh_q = p_bmesh_op_arg('q', bmesh_q_atom)
 
-bmesh_r = p_bmesh_op_arg(
-  'r', alt(const(val.lit(t_bmesh_tag, None), empty), bmesh_tag))
+bmesh_tag = p_lit(t_bmesh_tag, iseq(1, lit('>'), p_lword))
+bmesh_r   = p_bmesh_op_arg('r', alt(const(val.lit(t_bmesh_tag, None), empty),
+                                    bmesh_tag))
 
 
 mesh_op_scope = scope()
@@ -126,6 +124,10 @@ mesh_op_scope.ops.add(**{
   'c': p_bmesh_op('create_cube',  bmesh_r, p_bmesh_op_arg('dv', val_expr)),
   'b': p_bmesh_op('create_box',   bmesh_r, p_bmesh_op_arg('v1', val_atom),
                                            p_bmesh_op_arg('v2', val_atom)),
+  'q': p_bmesh_op('create_quad',  bmesh_r, p_bmesh_op_arg('du', val_atom),
+                                           p_bmesh_op_arg('dv', val_atom)),
+
+  '#': p_bmesh_op('delete', bmesh_q),
 
   'f':  p_bmesh_op('context_fill', bmesh_q, bmesh_r),
   'bl': p_bmesh_op('bridge_loops', bmesh_q, bmesh_r),

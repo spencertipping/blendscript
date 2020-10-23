@@ -18,10 +18,15 @@ try:
   import mathutils as mu
 
 
-  def faces(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
-  def edges(xs): return [e for e in xs if isinstance(e, bmesh.types.BMEdge)]
-  def verts(xs): return [v for v in xs if isinstance(v, bmesh.types.BMVert)]
-  def loops(xs): return [l for l in xs if isinstance(l, bmesh.types.BMLoop)]
+  def faces_(xs): return [f for f in xs if isinstance(f, bmesh.types.BMFace)]
+  def edges_(xs): return [e for e in xs if isinstance(e, bmesh.types.BMEdge)]
+  def verts_(xs): return [v for v in xs if isinstance(v, bmesh.types.BMVert)]
+  def loops_(xs): return [l for l in xs if isinstance(l, bmesh.types.BMLoop)]
+
+  def uniq(xs):  return list(set(xs))
+  def faces(xs): return faces_(xs)
+  def edges(xs): return uniq(edges_(xs) + [e for f in faces(xs) for e in f.edges])
+  def verts(xs): return uniq(verts_(xs) + [v for e in edges(xs) for v in e.verts])
 
 
   class bmesh_and_selection:
@@ -75,14 +80,14 @@ try:
         elif c == '-':
           q1, q2 = (set(self.select_(s)) for s in q[1:])
           return q1.difference(q2)
-        elif c == 'b':
+        elif c == 'B':
           l, u = q[1].co, q[2].co
-          return [v for v in vs if l[0] <= v[0] <= u[0] and
-                                  l[1] <= v[1] <= u[1] and
-                                  l[2] <= v[2] <= u[2]]
-        elif c == 'f': return faces(self.select_(q[1]))
-        elif c == 'e': return edges(self.select_(q[1]))
-        elif c == 'v': return verts(self.select_(q[1]))
+          return [v for v in vs if l[0] <= v.co[0] <= u[0] and
+                                   l[1] <= v.co[1] <= u[1] and
+                                   l[2] <= v.co[2] <= u[2]]
+        elif c == 'F': return faces(self.select_(q[1]))
+        elif c == 'E': return edges(self.select_(q[1]))
+        elif c == 'V': return verts(self.select_(q[1]))
 
       raise Exception(f'unsupported bmesh query: {q}')
 
@@ -138,7 +143,7 @@ try:
       self.transform(q, mu.Matrix.Translation(mu.Vector(v)))
       return self
 
-    def extrude(self, q, r='_'):
+    def extrude(self, q, r):
       """
       Multipurpose extrude. Delegates to individual bmesh methods to extrude
       vertices, edges, and faces, to the extent that the query produces them, and
@@ -146,22 +151,25 @@ try:
       this can produce ambiguous results in certain cases.
       """
       q = self.select(q)
-      qf = faces(q)
-      qe = edges(q)
-      qv = verts(q)
+      qf = faces_(q)
+      qe = edges_(q)
+      qv = verts_(q)
 
       rg = []
-      if len(qf):
-        rg += bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
-
-      if len(qe):
-        rg += bmesh.ops.extrude_edge_only(self.bmesh, edges=qe)['geom']
-
+      if len(qf): rg += bmesh.ops.extrude_discrete_faces(self.bmesh, faces=qf)['faces']
+      if len(qe): rg += bmesh.ops.extrude_edge_only(self.bmesh, edges=qe)['geom']
       if len(qv):
         rv = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=qv)
         rg += rv['edges'] + rv['verts']
 
       self.store(r, rg)
+      return self
+
+    def delete(self, q):
+      q = self.select(q)
+      bmesh.ops.delete(self.bmesh, geom=verts(q), context='VERTS')
+      bmesh.ops.delete(self.bmesh, geom=edges(q), context='EDGES')
+      bmesh.ops.delete(self.bmesh, geom=faces(q), context='FACES_KEEP_BOUNDARY')
       return self
 
     def create_cube(self, r, dv=mu.Vector((1, 1, 1))):
@@ -177,6 +185,24 @@ try:
                           vec=v1 + scale_matrix @ mu.Vector((0.5, 0.5, 0.5)))
 
       self.store(r, ret['verts'])
+      return self
+
+    def create_quad(self, r, du=mu.Vector((1, 0, 0)), dv=mu.Vector((0, 1, 0))):
+      v0 = bmesh.ops.create_vert(self.bmesh, co=mu.Vector((0, 0, 0)))['vert'][0]
+      v1 = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=[v0])
+      v2 = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=v1['verts'])
+      v3 = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=v2['verts'])
+
+      vs = [v0]
+      for v in [v1, v2, v3]: vs += v['verts']
+
+      bmesh.ops.translate(self.bmesh, vec=du, verts=[vs[1], vs[2]])
+      bmesh.ops.translate(self.bmesh, vec=dv, verts=[vs[2], vs[3]])
+      ret = bmesh.ops.contextual_create(self.bmesh, geom=[vs[0], vs[3]])
+
+      rv = vs + ret['edges'] + ret['faces']
+      for v in [v1, v2, v3]: rv += v['edges']
+      self.store(r, rv)
       return self
 
     def create_vert(self, r, v=mu.Vector((0, 0, 0))):

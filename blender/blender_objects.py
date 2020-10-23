@@ -9,6 +9,7 @@ from time import time
 from ..compatibility import *
 
 from .gc              import *
+from .units           import *
 from ..compiler.types import *
 from ..runtime.fn     import *
 
@@ -81,7 +82,7 @@ try:
     Moves an object to a vector (a location) or to a parent.
     """
     obj = blendify(obj)
-    if type(v_or_parent) == m.Vector: obj.location = v_or_parent
+    if type(v_or_parent) == m.Vector: obj.location = unit_scale(v_or_parent)
     else:                             obj.parent = blendify(v_or_parent)
     return obj
 
