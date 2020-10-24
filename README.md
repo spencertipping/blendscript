@@ -17,8 +17,8 @@ You can also run an offline REPL without loading Blender-specific libraries:
 $ ./repl -c '/+[1,2,3]'
 6
 $ ./repl
->>> f(+1) L*fi5
-[1, 2, 3, 4, 5] :: ([] .) (2ms)
+>>> f(+7) L*fi5
+[7, 8, 9, 10, 11] :: ([] .) (2ms)
 >>>
 ```
 
@@ -53,6 +53,8 @@ lexical scope that binds the name you provided:
 
 ```
 >>> f (+ 1) f 5
+6
+>>> :f (+ 1) f 5        # explicit : operator
 6
 ```
 
