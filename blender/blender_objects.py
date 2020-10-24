@@ -67,7 +67,8 @@ try:
     """
     Resolves x to a single object that can be used to parent another Blender
     object. This can either be an actual scene object, or it can be a vector
-    that will be become its origin.
+    that will be become its origin. Quaternions will become the object's
+    rotation.
     """
     x = resolve_blender_object(x)[0]
     if type(x) == m.Vector: x = unit_scale(x)
@@ -125,8 +126,11 @@ try:
     objects = resolve_blender_object(obj)
     for o in objects:
       if isinstance(o, bpy.types.Object):
-        if type(parent) == m.Vector: o.location = parent
-        elif o.parent is None:       o.parent   = parent
+        if   type(parent) == m.Vector:     o.location = parent
+        elif type(parent) == m.Quaternion:
+          o.rotation_mode = 'QUATERNION'
+          o.rotation_quaternion = parent
+        elif o.parent is None:             o.parent   = parent
     return objects
 
 

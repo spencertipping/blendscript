@@ -12,17 +12,19 @@ from ..parsers.val    import *
 from .fn              import fn
 
 
-t_vec2   = atom_type('V2')
-t_vec3   = atom_type('V3')
-t_vec4   = atom_type('V4')
-t_mat33  = atom_type('M33')
-t_mat44  = atom_type('M44')
+t_vec2       = atom_type('V2')
+t_vec3       = atom_type('V3')
+t_vec4       = atom_type('V4')
+t_quaternion = atom_type('Q')
+t_mat33      = atom_type('M33')
+t_mat44      = atom_type('M44')
 
 
 try:
   import mathutils as m
 
-  vec3        = val.of_fn([t_list(t_number)], t_vec3, lambda *xs: m.Vector(*xs).freeze())
+  vec3        = val.of_fn([t_list(t_number)], t_vec3,       lambda *xs: m.Vector(*xs).freeze())
+  quaternion  = val.of_fn([t_list(t_number)], t_quaternion, lambda *xs: m.Quaternion(*xs).freeze())
   translation = val.of_fn([t_vec3],   t_mat44, lambda *xs: m.Matrix.Translation(*xs).freeze())
   scale       = val.of_fn([t_vec3],   t_mat33, lambda *xs: m.Matrix.Diagonal(*xs).freeze())
   rotatex     = val.of_fn([t_number], t_mat33, lambda t: m.Matrix.Rotation(t, 3, 'X').freeze())
@@ -34,7 +36,8 @@ try:
 except ModuleNotFoundError:
   blender_not_found()
 
-  vec3        = val.of_fn([t_list(t_number)], t_vec3, tuple)
+  vec3        = val.of_fn([t_list(t_number)], t_vec3,       tuple)
+  quaternion  = val.of_fn([t_list(t_number)], t_quaternion, tuple)
   translation = val.of_fn([t_vec3],   t_mat44, tuple)
   scale       = val.of_fn([t_vec3],   t_mat33, tuple)
   rotatex     = val.of_fn([t_number], t_mat33, tuple)
@@ -47,13 +50,16 @@ except ModuleNotFoundError:
 zero = val.lit(t_number, 0)
 
 val_atom.ops.add(
-  x=pmap( lambda x:       vec3(val.list(x, zero, zero)), val_atom),
-  y=pmap( lambda y:       vec3(val.list(zero, y, zero)), val_atom),
-  z=pmap( lambda z:       vec3(val.list(zero, zero, z)), val_atom),
-  X=pmaps(lambda y, z:    vec3(val.list(zero, y, z)), exactly(2, val_atom)),
-  Y=pmaps(lambda x, z:    vec3(val.list(x, zero, z)), exactly(2, val_atom)),
-  Z=pmaps(lambda x, y:    vec3(val.list(x, y, zero)), exactly(2, val_atom)),
-  v=pmaps(lambda x, y, z: vec3(val.list(x, y, z)), exactly(3, val_atom)))
+  x=pmap( lambda x:    vec3(val.list(x, zero, zero)), val_atom),
+  y=pmap( lambda y:    vec3(val.list(zero, y, zero)), val_atom),
+  z=pmap( lambda z:    vec3(val.list(zero, zero, z)), val_atom),
+  X=pmaps(lambda y, z: vec3(val.list(zero, y, z)), exactly(2, val_atom)),
+  Y=pmaps(lambda x, z: vec3(val.list(x, zero, z)), exactly(2, val_atom)),
+  Z=pmaps(lambda x, y: vec3(val.list(x, y, zero)), exactly(2, val_atom)),
+
+  v=pmaps(fn(vec3)       @ fn(val.list), exactly(3, val_atom)),
+  q=pmaps(fn(quaternion) @ fn(val.list), exactly(4, val_atom)),
+)
 
 val_atom.bind(
   T=translation,
