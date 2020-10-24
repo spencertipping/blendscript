@@ -126,7 +126,7 @@ try:
     for o in objects:
       if isinstance(o, bpy.types.Object):
         if type(parent) == m.Vector: o.location = parent
-        else:                        o.parent   = parent
+        elif o.parent is None:       o.parent   = parent
     return objects
 
 

@@ -72,10 +72,12 @@ def run(source, **kwargs):
   """
   Runs the given source directly. This is a shorthand for compile(source)().
   """
-  gc_objects()
-  ft, f = compile(source, **kwargs)
-  v = f()
-  blender_refresh_view()
+  try:
+    ft, f = compile(source, **kwargs)
+    gc_objects()
+    v = f()
+  finally:
+    blender_refresh_view()
   return (ft, v)
 
 
