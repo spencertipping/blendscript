@@ -5,7 +5,7 @@ Expression grammars.
 from .peg import *
 
 
-p_comment    = re(r'#\s+.*\n?')
+p_comment    = re(r'(?:#\s|(?:NB|FIXME|TODO|Q)\W\s).*\n?')
 p_whitespace = re(r'\s+')
 p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
 
