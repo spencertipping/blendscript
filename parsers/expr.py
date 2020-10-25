@@ -32,8 +32,8 @@ class scope:
     self.ops      = dsp()
     self.literals = alt()
     self.bindings = dsp()
-    self.parser1  = modifier(self.bindings)
-    self.parser2  = modifier(alt(self.ops, self.literals))
+    self.parser1  = modifier(alt(self.bindings, self.literals))
+    self.parser2  = modifier(self.ops)
 
   def bind(self, **bindings):
     for b, v in bindings.items():
