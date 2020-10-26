@@ -150,8 +150,11 @@ try:
     if len(focal_set):
       for o in bpy.data.objects: o.select_set(False)
       for o in focal_set:
-        bpy.context.view_layer.objects.active = bpy.data.objects[o]
-        bpy.data.objects[o].select_set(True)
+        # We might get something bogus in the focal set if the type system
+        # doesn't validate our inputs. Ignore invalid stuff.
+        if o in bpy.data.objects:
+          bpy.context.view_layer.objects.active = bpy.data.objects[o]
+          bpy.data.objects[o].select_set(True)
 
       focused_anything = False
       for area in bpy.context.screen.areas:
