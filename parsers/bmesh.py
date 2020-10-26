@@ -40,9 +40,10 @@ try:
 
   def apply_bmesh_op(b, op):
     if getattr(op, '__iter__', None):
+      b.push()
       for o in op:
         b = apply_bmesh_op(b, o)
-      return b
+      return b.pop()
     else:
       return op(b)
 
@@ -85,15 +86,16 @@ type_expr.bind(**{
 
 # TODO: convert bmesh_query into a normal expr grammar?
 bmesh_query = alt()
-bmesh_q_atom = alt(
-  const(val.lit(t_bmesh_query, -1), empty), whitespaced(bmesh_query))
+bmesh_q_atom = whitespaced(alt(const(val.lit(t_bmesh_query, -1), empty),
+                               bmesh_query))
 
 bmesh_query.add(
   iseq(1, lit('('), whitespaced(bmesh_query), lit(')')),
 
-  p_lit(t_bmesh_query, const(None, lit(':'))),  # select all
-  p_lit(t_bmesh_query, p_int),                  # select by history
-  p_lit(t_bmesh_query, const(-1, lit('_'))),    # shorthand for most-recent output
+  p_lit(t_bmesh_query, const(None,   lit(':'))),   # select all in scope
+  p_lit(t_bmesh_query, const([None], lit('::'))),  # really select all
+  p_lit(t_bmesh_query, p_int),                     # select by history
+  p_lit(t_bmesh_query, const(-1, lit('_'))),       # shorthand for most-recent output
   p_lit(t_bmesh_query, iseq(1, lit('/'), p_varname)),
 
   p_typed(t_bmesh_query, p_list(re_str(r'[FEV]|\^[xyzXYZ]'), bmesh_q_atom)),

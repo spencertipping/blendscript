@@ -12,6 +12,7 @@ from ..compatibility import *
 from ..runtime.fn    import method
 from .units          import *
 
+
 try:
   import bmesh
   import bpy
@@ -52,35 +53,64 @@ try:
     Methods that accept "q" and "r" always position them before other arguments.
     """
     def __init__(self, bmesh):
-      self.bmesh   = bmesh
-      self.subsets = {}
-      self.history = []
+      self.bmesh       = bmesh
+      self.preexisting = [set()]
+      self.bindings    = [{}]
+      self.history     = []
 
-    def select(self, q): return list(self.select_(q))
-    def select_(self, q):
+    def push(self):
+      """
+      Push a new state. Changes within this state will be discarded when you
+      call pop().
+      """
+      self.preexisting.append(set(self.select_(None)))
+      self.bindings.append({})
+      return self
+
+    def pop(self):
+      self.preexisting.pop()
+      self.bindings.pop()
+      return self
+
+    def resolve_binding(self, b):
+      """
+      Looks up b in self.bindings, preferring inner bindings to outer ones.
+      """
+      for bs in reversed(self.bindings):
+        x = bs.get(b, None)
+        if x is not None: return x
+      raise Exception(
+        f'bmesh: failed to resolve {b} (available bindings are {self.bindings})')
+
+    def select(self, q):
       """
       Evaluates the selection query, returning the result. Options are:
 
-      + None: every object
-      + "x": self.subsets[x]
+      + None: every object within the current scope
+      + [None]: every object everywhere
+      + "x": self.bindings[-1][x]
       + int(n): nth history element; -1 is most recent, 0 is oldest
       + ['*', q1, q2, ...]: intersection of queries
       + ['+', q1, q2, ...]: union of queries
       + ['-', q1, q2]: difference of queries
-      + ['b', v1, v2]: box-select between vertices
-      + ['f', q]: faces from query
-      + ['e', q]: edges from query
-      + ['v', q]: vertices from query
+      + ['B', v1, v2]: box-select between vertices
+      + ['F', q]: faces from query
+      + ['E', q]: edges from query
+      + ['V', q]: vertices from query
       + ['^x', q]: sub-select results that hit the lower bound of X coordinates
         (plus analogous operators: '^X' to upper-bound X, '^y', '^Y', '^z', and
         '^Z')
       """
+      return list(self.select_(q))
+
+    def select_(self, q):
       vs = self.bmesh.verts
       es = self.bmesh.edges
       fs = self.bmesh.faces
 
-      if q is None:            return vs[:] + es[:] + fs[:]
-      elif isinstance(q, str): return self.subsets[q]
+      if q is None:            return set(vs[:] + es[:] + fs[:]) - self.preexisting[-1]
+      elif q == [None]:        return vs[:] + es[:] + fs[:]
+      elif isinstance(q, str): return self.resolve_binding(q)
       elif isinstance(q, int): return self.history[q]
       elif isinstance(q, tuple):
         c = q[0]
@@ -92,12 +122,13 @@ try:
                         (set(self.select_(s)) for s in q[1:]))
         elif c == '-':
           q1, q2 = (set(self.select_(s)) for s in q[1:])
-          return q1.difference(q2)
+          return q1 - q2
         elif c == 'B':
           l, u = q[1].co, q[2].co
           return [v for v in vs if l[0] <= v.co[0] <= u[0] and
                                    l[1] <= v.co[1] <= u[1] and
                                    l[2] <= v.co[2] <= u[2]]
+
         elif c == 'F': return faces(self.select_(q[1]))
         elif c == 'E': return edges(self.select_(q[1]))
         elif c == 'V': return verts(self.select_(q[1]))
@@ -124,8 +155,10 @@ try:
       """
       Stores the specified result set into a subset, ignoring if r == None. Adds
       the result to the history list in either case.
+
+      As a side effect, store() also recalculates the innermost all_set.
       """
-      if r is not None: self.subsets[r] = xs
+      if r is not None: self.bindings[-1][r] = xs
       self.history.append(xs)
       return self
 
@@ -201,7 +234,8 @@ try:
 
       if len(qv):
         rv = bmesh.ops.extrude_vert_indiv(self.bmesh, verts=qv)
-        rg += [e for e in rv['edges'] if vertices_are_disjoint(ivs, e)] + rv['verts']
+        rg += [e for e in rv['edges']
+                 if vertices_are_disjoint(ivs, e)] + rv['verts']
 
       self.store(r, rg)
       return self
@@ -261,8 +295,8 @@ try:
             axis=mu.Vector((0, 0, 1)),
             delta=mu.Vector((0, 0, 0))):
       ret = bmesh.ops.spin(self.bmesh, geom=self.select(q),
-                          cent=center, axis=axis, dvec=delta,
-                          angle=angle, steps=steps, use_merge=True)
+                           cent=center, axis=axis, dvec=delta,
+                           angle=angle, steps=steps, use_merge=True)
       self.store(r, ret['geom_last'])
       return self
 

@@ -33,10 +33,9 @@ def rewrite_let_binding(expr, modifier, unbound_name):
   Note that this let-binding applies as a _rewrite_, not as a normal lambda
   expression. For a lambda expression, use lambda_let_binding.
   """
-  return pflatmap(
-    pmaps(
-      lambda n, v: modifier(expr.scoped_subexpression(scope().bind(**{n: v}))),
-      seq(unbound_name, expr)))
+  return pflatmap(pmaps(
+    lambda n, v: modifier(expr.scoped_subexpression(scope().bind(**{n: v}))),
+    seq(unbound_name, expr)))
 
 
 def lambda_let_binding(expr, modifier, unbound_name):
@@ -122,7 +121,7 @@ def list_subscope(atom, subscope):
       pmaps(val.list, iseq(
         0,
         rep(iseq(0,
-                add_fncalls(atom.scoped_subexpression(subscope)),
-                maybe(lit(',')))),
+                 add_fncalls(atom.scoped_subexpression(subscope)),
+                 maybe(lit(',')))),
         whitespaced(lit(']')))),
       empty))
