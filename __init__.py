@@ -13,10 +13,11 @@ import traceback
 from time import time
 from sys  import stdin
 
-from .parsers.peg     import pmap
-from .parsers.val     import val_expr
-from .parsers.bmesh   import *
-from .parsers.bobject import *
+from .parsers.peg      import pmap
+from .parsers.val      import val_expr
+from .parsers.bmesh    import *
+from .parsers.bobject  import *
+from .parsers.material import *
 
 from .blender.gc          import *
 from .runtime.val         import *
@@ -25,7 +26,10 @@ from .runtime.blendermath import *
 
 try:
   import bpy
-  def gc_objects(): gc(bpy.data.objects)
+  def gc_objects():
+    gc(bpy.data.materials)
+    gc(bpy.data.meshes)
+    gc(bpy.data.objects)
 
 except ModuleNotFoundError:
   def gc_objects(): pass

@@ -126,11 +126,13 @@ try:
     objects = resolve_blender_object(obj)
     for o in objects:
       if isinstance(o, bpy.types.Object):
-        if   type(parent) == m.Vector:     o.location = parent
+        if   type(parent) == m.Vector: o.location = parent
         elif type(parent) == m.Quaternion:
           o.rotation_mode = 'QUATERNION'
           o.rotation_quaternion = parent
-        elif o.parent is None:             o.parent   = parent
+        elif type(parent) == bpy.types.Material:
+          o.active_material = parent
+        elif o.parent is None: o.parent = parent
     return objects
 
 

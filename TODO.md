@@ -1,6 +1,6 @@
 # TODO
 + [x] `bmesh` binding stack for nested subexpressions
-+ [ ] Basic materials
++ [x] Basic materials for visual contrast
 + [ ] Armatures
   + [ ] Bones
   + [ ] IK constraints
