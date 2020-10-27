@@ -61,9 +61,10 @@ try:
     def push(self):
       """
       Push a new state. Changes within this state will be discarded when you
-      call pop().
+      call pop(). History has no state tracking because it's already implicitly
+      local if you're referring backwards.
       """
-      self.preexisting.append(set(self.select_(None)))
+      self.preexisting.append(set(self.select_([None])))
       self.bindings.append({})
       return self
 
@@ -155,8 +156,6 @@ try:
       """
       Stores the specified result set into a subset, ignoring if r == None. Adds
       the result to the history list in either case.
-
-      As a side effect, store() also recalculates the innermost all_set.
       """
       if r is not None: self.bindings[-1][r] = xs
       self.history.append(xs)

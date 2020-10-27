@@ -149,11 +149,11 @@ mesh_op_scope.ops.add(**{
   's': p_bmesh_op(
     'spin',
     bmesh_q, bmesh_r,
-    maybe(p_bmesh_op_arg('angle',  val_expr)),
-    maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_expr))),
-    maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_expr))),
-    maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_expr))),
-    maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_expr))))})
+    maybe(p_bmesh_op_arg('angle',  val_atom)),
+    maybe(p_bmesh_op_arg('steps',  iseq(1, lit('*'), val_atom))),
+    maybe(p_bmesh_op_arg('center', iseq(1, lit('@'), val_atom))),
+    maybe(p_bmesh_op_arg('axis',   iseq(1, lit('^'), val_atom))),
+    maybe(p_bmesh_op_arg('delta',  iseq(1, lit('+'), val_atom))))})
 
 
 make_bmesh_fn = val.of_fn([t_list(t_bmesh_op)], t_blendmesh, make_bmesh)
