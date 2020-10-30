@@ -12,6 +12,7 @@ from ..parsers.val    import *
 from .fn              import fn
 
 
+# TODO: add these bindings to type exprs
 t_vec2       = atom_type('V2')
 t_vec3       = atom_type('V3')
 t_vec4       = atom_type('V4')

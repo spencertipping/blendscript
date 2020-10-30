@@ -25,14 +25,22 @@ try:
     blender_focus_on(name)
     return name
 
+  def blender_make_invisible(obj):
+    for o in resolve_blender_object(obj):
+      o.hide_viewport = True
+    return obj
+
   v_add_obj           = val.of_fn([t_string,         t_blendobj], t_string,   blender_add_object)
   v_move_obj          = val.of_fn([t_blendobjparent, t_blendobj], t_blendobj, blender_move_to)
   v_add_and_focus_obj = val.of_fn([t_string,         t_blendobj], t_string,   blender_add_and_focus_object)
   v_focus_obj         = val.of_fn([t_blendobj],                   t_blendobj, blender_focus_on)
 
+  v_make_invisible    = val.of_fn([t_blendobj], t_blendobj, blender_make_invisible)
+
   val_atom.bind(**{'b<':  v_add_obj,
                    'b@':  v_move_obj,
                    'b=':  v_focus_obj,
+                   'b#':  v_make_invisible,
                    'b<=': v_add_and_focus_obj})
 
 except ModuleNotFoundError:

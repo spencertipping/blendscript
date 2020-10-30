@@ -11,7 +11,7 @@ BlendScript is largely expression-driven and is parsed using combinatory PEG.
 
 import traceback
 from time import time
-from sys  import stdin
+from sys  import stdin, setrecursionlimit
 
 from .parsers.peg      import pmap
 from .parsers.val      import val_expr
@@ -42,7 +42,7 @@ bl_info = {
 }
 
 
-def register():   pass
+def register(): setrecursionlimit(1048576)
 def unregister(): pass
 
 
