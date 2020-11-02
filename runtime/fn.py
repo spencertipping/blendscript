@@ -22,6 +22,8 @@ class fn:
   def __init__(self, f, source=None):
     self.f      = f.f if type(f) == type(self) else f
     self.source = source
+    if getattr(self.f, '__call__', None) is None: raise RuntimeError(
+      f'tried to create fn() of non-callable object {self.f}')
 
   def __str__(self):       return self.source or str(self.f)
   def __repr__(self):      return str(self)

@@ -126,6 +126,36 @@ class alt:
     return self.ps[-1]
 
 
+class lalt:
+  """
+  A variant of alt() that selects whichever parser consumes the most input. If
+  two parsers match, the later one is preferred.
+  """
+  def __init__(self, *ps):
+    self.ps = []
+    self.add(*ps)
+    parserify(self)
+
+  def __call__(self, s, i):
+    best_v, best_i2 = None, None
+    for p in self.ps:
+      v, i2 = p(s, i)
+      if best_i2 is None or i2 is not None and i2 >= best_i2:
+        best_v, best_i2 = v, i2
+    return (best_v, best_i2)
+
+  def add(self, *ps):
+    for p in ps: self.ps.append(parser(p))
+    return self
+
+  def pop(self):
+    self.ps.pop()
+    return self
+
+  def last(self):
+    return self.ps[-1]
+
+
 class dsp:
   """
   Constant-prefix dispatch parsing. We then attempt to parse using the longest

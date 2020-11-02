@@ -122,17 +122,19 @@ try:
     Objects are flattened if they are in a list. If any object is not a Blender
     scene object, it is ignored.
     """
-    parent = resolve_blender_parent(v_or_parent)
+    parent  = resolve_blender_parent(v_or_parent)
     objects = resolve_blender_object(obj)
     for o in objects:
       if isinstance(o, bpy.types.Object):
-        if   type(parent) == m.Vector: o.location = parent
+        if   type(parent) == m.Vector: o.location += parent
         elif type(parent) == m.Quaternion:
-          o.rotation_mode = 'QUATERNION'
+          o.rotation_mode       = 'QUATERNION'
           o.rotation_quaternion = parent
         elif type(parent) == bpy.types.Material:
           o.active_material = parent
-        elif o.parent is None: o.parent = parent
+        else:
+          if o.parent is None: o.parent = parent
+
     return objects
 
 

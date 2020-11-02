@@ -53,7 +53,7 @@ class expr_grammar:
     self.literals    = self.top_scope.literals
     self.scopes      = [self.top_scope]
 
-    self.alt1   = alt(self.top_scope.parser1)
+    self.alt1   = lalt(self.top_scope.parser1)
     self.alt2   = alt(self.last_resort, self.top_scope.parser2)
     self.parser = modifier(alt(self.alt2, self.alt1))
 
