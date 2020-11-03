@@ -78,7 +78,7 @@ try:
   def blender_add_object(name, obj):
     """
     Adds a Blender scene object with the specified name. If an object with that
-    name already exists, it will be unlinked.
+    name already exists, the object will be renamed with a suffix.
 
     Names can have forward slashes. If they do, those slashes will be
     interpreted as a directory structure: parent directories are created using
@@ -88,9 +88,6 @@ try:
     collection or something
     """
     t0 = time()
-    if len(name) and name in bpy.data.objects:
-      bpy.data.objects.remove(bpy.data.objects[name])
-
     linked_obj = bpy.data.objects.new(name, obj)
     bpy.context.scene.collection.objects.link(linked_obj)
     bpy.context.view_layer.objects.active = linked_obj
