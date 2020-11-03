@@ -5,9 +5,10 @@ Expression grammars.
 from .peg import *
 
 
-p_comment    = re(r'(?:#\s|(?:NB|FIXME|TODO|Q)\W\s).*\n?')
-p_whitespace = re(r'\s+')
-p_ignore     = rep(alt(p_whitespace, p_comment), min=1)
+p_line_comment  = re(r'(?:#\s|(?:NB|FIXME|TODO|Q)\W\s).*\n?')
+p_block_comment = re(r'#\[[^\]]*\]')
+p_whitespace    = re(r'\s+')
+p_ignore        = rep(alt(p_whitespace, p_block_comment, p_line_comment), min=1)
 
 def whitespaced(p):
   """
