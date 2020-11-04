@@ -5,7 +5,13 @@ A "val" is a chunk of code (which may be splayed out into a list of other vals)
 and a blendscript_type that describes what the result will be. BlendScript has
 enough static type information that it can apply specific conversions before
 the resulting Python code is compiled.
+
+Python will overflow its parse stack if we generate deeply nested lists and
+lambda expressions. We can avoid this by using the ast module to directly
+generate parse trees, then feed those to compile().
 """
+
+import ast
 
 from functools import partial, reduce
 
@@ -26,6 +32,17 @@ def sanitize_identifier(s):
   return re.sub(non_ident, hex_quote, s)
 
 
+def arglist(xs):
+  """
+  Provide the preposterously long list of defaults to AST stuff.
+  """
+  return ast.arguments(args=xs,
+                       posonlyargs=[],
+                       kwonlyargs=[],
+                       kw_defaults=[],
+                       defaults=[])
+
+
 class val:
   """
   A BlendScript value produced by the specified code and having type t. code
@@ -39,13 +56,11 @@ class val:
   def __init__(self, t, code, ref=None):
     # Validate the code object here because I know I'm going to screw this up
     # somewhere
-    if type(code) == val:
-      raise TypeError(f'trying to call val({t}) on {code}, which is already a val')
+    if type(code) == val: raise TypeError(
+        f'trying to call val({t}) on {code}, which is already a val')
 
-    if type(code) != str:
-      for c in code:
-        if type(c) != val and type(c) != str:
-          raise Exception(f'instantiating val with invalid code: {code}')
+    if not isinstance(code, ast.AST): raise TypeError(
+        f'trying to call val({t}) on {code}, which is not an AST')
 
     if not isatype(t):
       raise Exception(f'instantiating val with invalid type: {t}')
@@ -53,6 +68,8 @@ class val:
     self.t    = t
     self.code = code
     self.ref  = ref
+
+  def __str__(self): return ast.dump(self.code)
 
   def __repr__(self):
     typestr = '' if self.t == t_dynamic else f' :: {str(self.t)}'
@@ -63,7 +80,10 @@ class val:
     Compiles this value into a nullary lambda that will return the result when
     invoked.
     """
-    return eval('lambda: ' + str(self), val.bound_globals)
+    e = ast.Expression(ast.Lambda(args=arglist([]), body=self.code))
+    ast.fix_missing_locations(e)
+    c = compile(e, 'blendscript', 'eval')
+    return eval(c, val.bound_globals)
 
   @classmethod
   def of(cls, t, v):
@@ -77,7 +97,7 @@ class val:
     import re
     words = '_'.join(re.compile(r'\w+').findall(repr(v)))
     gs = f'_G{words}{cls.gensym_id}'
-    r = val(t, gs, ref=v)
+    r = val(t, ast.Name(id=gs, ctx=ast.Load()), ref=v)
     cls.gensym_id += 1
     cls.bound_globals[gs] = v
     cls.global_vals[v] = r
@@ -91,14 +111,12 @@ class val:
     works because the value is serialized into the compiled output, not
     referenced via the global gensym table.)
     """
-    r = repr(v)
-    ok = False
-    try: ok = eval(r) == v
-    except: pass
-
-    if not ok: raise Exception(
-      f'{repr(v)} is not sufficiently serializable to use with val.lit()')
-    return cls(t, repr(v), ref=v)
+    try:
+      r = ast.parse(repr(v)).body[0].value
+      return cls(t, r, ref=v)
+    except:
+      raise Exception(
+        f'{repr(v)} is not sufficiently serializable to use with val.lit()')
 
   @classmethod
   def var_ref(cls, t, name):
@@ -106,7 +124,7 @@ class val:
     Refers to a variable by its symbolic name. If the variable contains
     characters that Python disallows, they are replaced by hex escapes.
     """
-    return cls(t, sanitize_identifier(name))
+    return cls(t, ast.Name(id=name, ctx=ast.Load()))
 
   @classmethod
   def bind_var(cls, name, val, expr):
@@ -115,8 +133,9 @@ class val:
     sanitized in a way that's consistent with var_ref, which you should use to
     refer to it within expr.
     """
-    return cls(expr.t, [f'(lambda {sanitize_identifier(name)}:', expr, ')',
-                        '(', val, ')'])
+    fn = ast.Lambda(args=arglist([sanitize_identifier(name)]),
+                    body=expr.code)
+    return cls(expr.t, ast.Call(func=fn, args=[val.code]))
 
   @classmethod
   def int(cls, i): return cls.lit(t_int, int(i))
@@ -153,8 +172,11 @@ class val:
     """
     Compiles to a lambda with the specified val as the body.
     """
-    return cls(t_fn(at, body.t),
-               [fn_val, f'(lambda {argname}:', body, ')'])
+    f = ast.Call(
+      fn_val.code,
+      ast.Lambda(args=arglist([sanitize_identifier(argname)]),
+                 body=body.code))
+    return cls(t_fn(at, body.t), f)
 
   @classmethod
   def list(cls, *xs):
@@ -163,15 +185,12 @@ class val:
     compiled as a Python tuple. The type is inferred as the upper bound of all
     member types.
     """
-    t  = None
-    ys = ['(']
+    t = None
     for x in xs:
       if t is None: t = x.t
       x.t.unify_with(t)
-      ys.append(x)
-      ys.append(',')
-    ys.append(')')
-    return cls(t_list(t or typevar()), ys)
+    return cls(t_list(t or typevar()),
+               ast.Tuple(elts=[x.code for x in xs], ctx=ast.Load()))
 
   def typed(self, t):
     """
@@ -179,20 +198,6 @@ class val:
     type.
     """
     return val(t, self.code, ref=self.ref)
-
-  def __str__(self):
-    l = []
-    self.str_into(l)
-    return ''.join(l)
-
-  def str_into(self, l):
-    if type(self.code) == str:
-      l.append(self.code)
-    else:
-      for c in self.code:
-        if type(c) == str: l.append(c)
-        else:              c.str_into(l)
-    return self
 
   def __call__(self, x):
     """
@@ -204,7 +209,7 @@ class val:
     if r is None: raise Exception(f'cannot call non-function {self} on {x}')
 
     x.t.unify_with(a)
-    return val(r, [self, '(', x, ')'])
+    return val(r, ast.Call(self.code, [x.code], posonlyargs=[], keywords=[]))
 
   def __if__(self, t, f):
     """
@@ -212,7 +217,8 @@ class val:
     """
     t.t.unify_with(f.t)
     self.t.unify_with(t_bool)
-    return val(t.t, ['(', t, ' if ', self, ' else ', f, ')'])
+    return val(t.t,
+               ast.IfExp(test=self.code, body=t.code, orelse=f.code))
 
 
 fn_val = with_typevars(lambda v: val.of_fn([v], v, fn))
