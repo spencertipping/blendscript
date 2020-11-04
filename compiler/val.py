@@ -127,7 +127,7 @@ class val:
     Refers to a variable by its symbolic name. If the variable contains
     characters that Python disallows, they are replaced by hex escapes.
     """
-    return cls(t, ast.Name(id=name, ctx=ast.Load()))
+    return cls(t, ast.Name(id=sanitize_identifier(name), ctx=ast.Load()))
 
   @classmethod
   def bind_var(cls, name, val, expr):
