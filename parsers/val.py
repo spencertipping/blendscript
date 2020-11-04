@@ -5,6 +5,8 @@ Parsers for blendscript values. Types have a separate grammar that is used
 contextually within value-expressions.
 """
 
+import ast
+
 from .peg   import *
 from .basic import *
 from .expr  import *
@@ -29,7 +31,7 @@ val_atom.literals.add(
   pmap(val.str,   re(r'"([^\s()\[\]{}]*)')),
 
   # Python expressions within {}
-  pmaps(lambda t, v: val(t, f'({v})'),
+  pmaps(lambda t, v: val(t, ast.parse(v).body[0].value),
         iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
 val_atom.ops.add(**{

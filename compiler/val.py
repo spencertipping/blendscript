@@ -36,11 +36,14 @@ def arglist(xs):
   """
   Provide the preposterously long list of defaults to AST stuff.
   """
-  return ast.arguments(args=xs,
+  return ast.arguments(args=[ast.arg(arg=x) for x in xs],
                        posonlyargs=[],
                        kwonlyargs=[],
                        kw_defaults=[],
                        defaults=[])
+
+def call(f, xs):
+  return ast.Call(f, xs, keywords=[])
 
 
 class val:
@@ -135,7 +138,7 @@ class val:
     """
     fn = ast.Lambda(args=arglist([sanitize_identifier(name)]),
                     body=expr.code)
-    return cls(expr.t, ast.Call(func=fn, args=[val.code]))
+    return cls(expr.t, call(fn, [val.code]))
 
   @classmethod
   def int(cls, i): return cls.lit(t_int, int(i))
@@ -172,10 +175,10 @@ class val:
     """
     Compiles to a lambda with the specified val as the body.
     """
-    f = ast.Call(
+    f = call(
       fn_val.code,
-      ast.Lambda(args=arglist([sanitize_identifier(argname)]),
-                 body=body.code))
+      [ast.Lambda(args=arglist([sanitize_identifier(argname)]),
+                  body=body.code)])
     return cls(t_fn(at, body.t), f)
 
   @classmethod
@@ -209,7 +212,7 @@ class val:
     if r is None: raise Exception(f'cannot call non-function {self} on {x}')
 
     x.t.unify_with(a)
-    return val(r, ast.Call(self.code, [x.code], posonlyargs=[], keywords=[]))
+    return val(r, call(self.code, [x.code]))
 
   def __if__(self, t, f):
     """
