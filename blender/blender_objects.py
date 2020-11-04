@@ -143,8 +143,11 @@ try:
     If any objects have been focused using focal_set, we set the viewport to
     focus on them.
     """
-    bpy.ops.object.mode_set(mode='EDIT')
-    bpy.ops.object.mode_set(mode='OBJECT')
+    try:
+      bpy.ops.object.mode_set(mode='EDIT')
+      bpy.ops.object.mode_set(mode='OBJECT')
+    except:
+      print('blendscript warning: blender failed to update view context')
 
     if len(focal_set):
       for o in bpy.data.objects: o.select_set(False)
