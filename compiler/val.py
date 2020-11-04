@@ -154,9 +154,7 @@ class val:
     Compiles to a lambda with the specified val as the body.
     """
     return cls(t_fn(at, body.t),
-               [fn_val, f'(lambda {argname}:', body,
-                # ',source=', repr(f'\\{argname}{at} {body}'),
-                ')'])
+               [fn_val, f'(lambda {argname}:', body, ')'])
 
   @classmethod
   def list(cls, *xs):

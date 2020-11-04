@@ -1,9 +1,9 @@
 # TODO
 ## Defects
-+ [x] We should always prefer the longest in-scope identifier
 + [ ] It's too easy to stack-overflow python's parser with deeply nested
-      subexprs
-+ [ ] Parsing BlendScript requires a big boost in stack size
+      subexprs (major; maybe fixable using the `ast` module)
++ [ ] There isn't any type inference yet
++ [ ] Parsing BlendScript requires a big boost in stack size (minor)
 
 
 ## Features
