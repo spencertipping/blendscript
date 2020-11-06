@@ -24,7 +24,7 @@ val_atom.literals.add(
   iseq(1, lit('('), val_expr, lit(')')),
 
   pflatmap(
-    const(lambda_let_binding(val_atom, add_fncalls, re(r':([^:\s()\[\]{}]+)')),
+    const(lambda_let_binding(val_atom, add_fncalls, re(r':([^\s()\[\]{}]+)')),
           empty)),
 
   pmap(val.int,   p_int),
