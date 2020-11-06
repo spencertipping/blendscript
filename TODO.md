@@ -4,6 +4,7 @@
       subexprs (major; maybe fixable using the `ast` module)
 + [ ] There isn't any type inference yet
 + [ ] Parsing BlendScript requires a big boost in stack size (minor)
++ [ ] BlendScript is too slow for large (>700LOC) designs
 
 
 ## Features
