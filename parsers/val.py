@@ -20,11 +20,12 @@ val_atom = expr_grammar()
 val_expr = add_fncalls(val_atom)
 
 
-val_atom.last_resort.add(
-  lambda_let_binding(val_atom, add_fncalls, alt(p_lword, re(r"'([^\s()\[\]{}]+)"))))
-
 val_atom.literals.add(
   iseq(1, lit('('), val_expr, lit(')')),
+
+  pflatmap(
+    const(lambda_let_binding(val_atom, add_fncalls, re(r':([^:\s()\[\]{}]+)')),
+          empty)),
 
   pmap(val.int,   p_int),
   pmap(val.float, p_float),
@@ -35,10 +36,6 @@ val_atom.literals.add(
         iseq([1, 2], lit('{'), type_expr, re('([^\}]+)\}'))))
 
 val_atom.ops.add(**{
-  ':': pflatmap(
-    const(lambda_let_binding(val_atom, add_fncalls, re(r'[^\s()\[\]{}]+')),
-          empty)),
-
   '[': pmaps(val.list, iseq(0,
                             rep(iseq(0, val_expr, maybe(lit(',')))),
                             whitespaced(lit(']')))),

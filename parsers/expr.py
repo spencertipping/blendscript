@@ -28,6 +28,11 @@ class scope:
 
   Scopes are unaware of their parents; parenting is managed by a toplevel alt()
   stack.
+
+  Bindings and literals always take precedence over operators, including
+  bindings inherited from parent scopes. So we try all bindings/literals in
+  child->parent order, then try all ops if that fails. This logic is handled by
+  expr_grammar, but we help it out by providing parser1 and parser2 separately.
   """
   def __init__(self, modifier=whitespaced):
     self.ops      = dsp()

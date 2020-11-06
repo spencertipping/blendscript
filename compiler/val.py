@@ -130,15 +130,17 @@ class val:
     return cls(t, ast.Name(id=sanitize_identifier(name), ctx=ast.Load()))
 
   @classmethod
-  def bind_var(cls, name, val, expr):
+  def bind_vars(cls, bindings, expr):
     """
     Wraps expr within a lexical context that binds name to val. name is
     sanitized in a way that's consistent with var_ref, which you should use to
     refer to it within expr.
     """
-    fn = ast.Lambda(args=arglist([sanitize_identifier(name)]),
-                    body=expr.code)
-    return cls(expr.t, call(fn, [val.code]))
+    ks = list(bindings.keys())
+    fn = ast.Lambda(
+      args=arglist([sanitize_identifier(name) for name in ks]),
+      body=expr.code)
+    return cls(expr.t, call(fn, [bindings[name].code for name in ks]))
 
   @classmethod
   def int(cls, i): return cls.lit(t_int, int(i))

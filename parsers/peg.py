@@ -264,6 +264,23 @@ def pmap(f, p):
   return parserify(g)
 
 
+def pmape(f, p):
+  """
+  Transforms a parser's value using the specified function, if the parser
+  succeeds. If it fails then the function isn't called.
+
+  This variant also fails if the function throws an exception.
+  """
+  parser(p)
+  def g(s, i):
+    v, i2 = p(s, i)
+    try:
+      return (v if i2 is None else f(v), i2)
+    except Exception as e:
+      return fail(e)
+  return parserify(g)
+
+
 def pmaps(f, p):
   """
   Just like pmap, but assumes the parser returns a list and splays the

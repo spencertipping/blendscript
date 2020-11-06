@@ -40,15 +40,20 @@ def rewrite_let_binding(expr, modifier, unbound_name):
 
 def lambda_let_binding(expr, modifier, unbound_name):
   """
-  Runtime let-binding and parse extension.
+  Runtime let-binding and parse extension. This let-binding relies on parse
+  failure to infer dependencies; because of this, you shouldn't try to shadow
+  variables. If you need to shadow something, you'll want to break the
+  definition chain using a nop like `0[...].
   """
-  def bind(n, v):
-    var_entry = val.var_ref(v.t, n)
+  def bind(nvs):
+    var_entries = {}
+    for n, v in nvs:
+      var_entries[n] = val.var_ref(v.t, n)
     return pmap(
-      lambda e: val.bind_var(n, v, e),
-      modifier(expr.scoped_subexpression(scope().bind(**{n: var_entry}))))
+      lambda e: val.bind_vars(dict(nvs), e),
+      modifier(expr.scoped_subexpression(scope().bind(**var_entries))))
 
-  return pflatmap(pmaps(bind, seq(unbound_name, expr)))
+  return pflatmap(pmap(bind, plus(seq(unbound_name, expr))))
 
 
 def lambda_parser(expr, modifier, argname, argtype):

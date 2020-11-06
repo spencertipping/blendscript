@@ -78,3 +78,7 @@ parse dependency).
 to generate Blender output. The define-stuff grammar would produce a scope
 object containing precompiled values that would get bound up as
 compile-transient gensyms.
+
+One minor challenge is that we need to preserve type information despite having
+precompiled expressions. That is, the scope exists at two levels: one to
+influence the parser and one to provide lexical bindings for the compiled value.
