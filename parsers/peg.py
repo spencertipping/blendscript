@@ -106,30 +106,37 @@ class alt:
   def __init__(self, *ps):
     self.ps = []
     self.add(*ps)
+    self.update_rps()
     parserify(self)
 
   def __call__(self, s, i):
-    for p in reversed(self.ps):
+    for p in self.rps:
       v, i2 = p(s, i)
       if i2 is not None: return (v, i2)
     return fail(None)
 
   def add(self, *ps):
     for p in ps: self.ps.append(parser(p))
+    self.update_rps()
     return self
 
   def pop(self):
     self.ps.pop()
+    self.update_rps()
     return self
 
   def last(self):
     return self.ps[-1]
 
+  def update_rps(self):
+    self.rps = list(reversed(self.ps))
+    return self
+
 
 class lalt:
   """
   A variant of alt() that selects whichever parser consumes the most input. If
-  two parsers match, the later one is preferred.
+  two parsers consume the same amount, the later one is preferred.
   """
   def __init__(self, *ps):
     self.ps = []
