@@ -82,3 +82,13 @@ compile-transient gensyms.
 One minor challenge is that we need to preserve type information despite having
 precompiled expressions. That is, the scope exists at two levels: one to
 influence the parser and one to provide lexical bindings for the compiled value.
+
+...so to implement this, all we need is a compile-level gensym scope for `val`
+and a grammar that produces such a scope from a series of definitions. We then
+tag each Blender object with the module ID that produced it so we can reuse
+things that haven't changed. (Realistically, we should probably do this by
+having a way to parameterize globals; that way we can bake the module ID into
+the blender functions.)
+
+HM isn't an issue across modules; we can process each individually and keep
+refinements local.
